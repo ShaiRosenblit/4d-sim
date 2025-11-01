@@ -44,7 +44,7 @@ const params: SimulationParams = {
   glowIntensity: 0.5,
   blendFactor: 1.0,
   opacity: 1.0,
-  blendingMode: 'Additive',
+  blendingMode: 'Normal',
   depthWrite: false
 };
 
