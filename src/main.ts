@@ -277,8 +277,8 @@ function createParticleSystem() {
       opacity: { value: params.opacity }
     },
     transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending
+    depthWrite: params.depthWrite,
+    blending: getBlendingMode(params.blendingMode)
   });
   
   // Create points
