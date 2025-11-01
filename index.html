@@ -83,30 +83,99 @@
     /* Device Orientation Button */
     #enable-orientation {
       position: fixed;
-      top: 10px;
-      right: 10px;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       padding: 12px 20px;
-      background: rgba(76, 175, 80, 0.9);
+      background: rgba(76, 175, 80, 0.95);
       border: 1px solid rgba(255, 255, 255, 0.3);
       color: white;
       border-radius: 8px;
       cursor: pointer;
       display: none;
-      z-index: 1000;
+      z-index: 10000;
       font-size: 14px;
       font-weight: 500;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
       transition: all 0.2s;
+      white-space: nowrap;
     }
 
     #enable-orientation:hover {
       background: rgba(76, 175, 80, 1);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      transform: translateX(-50%) translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
     }
 
     #enable-orientation:active {
-      transform: translateY(0);
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Toggle Controls Button for Mobile */
+    #toggle-controls {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      background: rgba(40, 40, 40, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      display: none;
+      z-index: 10000;
+      font-size: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #toggle-controls:active {
+      background: rgba(60, 60, 60, 0.9);
+      transform: scale(0.95);
+    }
+
+    /* Make lil-gui more mobile friendly */
+    @media (max-width: 768px) {
+      .lil-gui {
+        --width: 280px;
+        --widget-height: 24px;
+        --padding: 6px;
+        --spacing: 6px;
+        --font-size: 12px;
+        --input-font-size: 12px;
+        --folder-indent: 8px;
+        --scrollbar-width: 6px;
+        --slider-input-width: 30%;
+        --color-input-width: 60%;
+        --slider-input-min-width: 40px;
+        --color-input-min-width: 40px;
+        --folder-title-height: 24px;
+        --widget-padding: 0 0 0 6px;
+        max-height: 70vh;
+        overflow-y: auto;
+      }
+
+      .lil-gui.root {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+      }
+
+      /* Hide GUI by default on mobile */
+      .lil-gui.hidden-mobile {
+        display: none !important;
+      }
+
+      /* Increase touch targets */
+      .lil-gui button,
+      .lil-gui input,
+      .lil-gui .slider {
+        min-height: 32px;
+      }
     }
   </style>
 </head>
@@ -124,6 +193,9 @@
       <button id="dismiss-warning">I Understand, Continue</button>
     </div>
   </div>
+
+  <!-- Toggle Controls Button (shown only on mobile) -->
+  <button id="toggle-controls">⚙️</button>
 
   <!-- Device Orientation Button (shown only on mobile) -->
   <button id="enable-orientation">📱 Enable Device Orientation</button>

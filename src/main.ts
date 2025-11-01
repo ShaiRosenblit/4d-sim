@@ -32,16 +32,16 @@ interface SimulationParams {
 }
 
 const params: SimulationParams = {
-  rotationSpeedXY: 0.5,
-  rotationSpeedZW: 0.3,
+  rotationSpeedXY: 0.11,
+  rotationSpeedZW: 0.08,
   particleSize: 3.0,
-  spread: 5.0,
+  spread: 8.5,
   colorIntensity: 1.0,
-  colorAnimationSpeed: 0.5,
+  colorAnimationSpeed: 0.0,
   timeScale: 1.0,
   projectionFactor: 0.5,
-  sharpness: 0.3,
-  glowIntensity: 1.0,
+  sharpness: 1.0,
+  glowIntensity: 0.5,
   blendFactor: 1.0,
   opacity: 1.0,
   blendingMode: 'Additive',
@@ -341,6 +341,11 @@ function createGUI() {
   gui = new GUI();
   gui.title('4D Wave Controls');
   
+  // Hide GUI on mobile by default
+  if (isMobile) {
+    gui.domElement.classList.add('hidden-mobile');
+  }
+  
   const rotationFolder = gui.addFolder('Rotation');
   rotationFolder.add(params, 'rotationSpeedXY', 0, 2, 0.01)
     .name('XY Speed');
@@ -578,8 +583,27 @@ function init() {
   // Setup event listeners
   window.addEventListener('resize', onWindowResize);
   
-  // Setup device orientation for mobile
+  // Setup mobile-specific controls
   if (isMobile) {
+    // Setup toggle controls button
+    const toggleButton = document.getElementById('toggle-controls');
+    if (toggleButton) {
+      toggleButton.style.display = 'flex';
+      let guiVisible = false;
+      
+      toggleButton.addEventListener('click', () => {
+        guiVisible = !guiVisible;
+        if (guiVisible) {
+          gui.domElement.classList.remove('hidden-mobile');
+          toggleButton.textContent = '✕';
+        } else {
+          gui.domElement.classList.add('hidden-mobile');
+          toggleButton.textContent = '⚙️';
+        }
+      });
+    }
+    
+    // Setup device orientation button
     const orientationButton = document.getElementById('enable-orientation');
     if (orientationButton) {
       orientationButton.style.display = 'block';
