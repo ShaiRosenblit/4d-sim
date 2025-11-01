@@ -26,6 +26,7 @@ interface SimulationParams {
   sharpness: number;
   glowIntensity: number;
   blendFactor: number;
+  opacity: number;
 }
 
 const params: SimulationParams = {
@@ -39,7 +40,8 @@ const params: SimulationParams = {
   projectionFactor: 0.5,
   sharpness: 0.3,
   glowIntensity: 1.0,
-  blendFactor: 1.0
+  blendFactor: 1.0,
+  opacity: 1.0
 };
 
 // ============================================================================
@@ -127,6 +129,7 @@ const fragmentShader = `
   uniform float sharpness;
   uniform float glowIntensity;
   uniform float blendFactor;
+  uniform float opacity;
   
   varying vec3 vColor;
   varying float vIntensity;
@@ -148,8 +151,8 @@ const fragmentShader = `
     // Add glow effect with controllable intensity
     finalColor += vec3(0.2, 0.2, 0.3) * (1.0 - dist * 2.0) * glowIntensity;
     
-    // Apply blend factor to simulate blend mode interpolation
-    gl_FragColor = vec4(finalColor, alpha * blendFactor);
+    // Apply blend factor and opacity to simulate blend mode interpolation
+    gl_FragColor = vec4(finalColor, alpha * blendFactor * opacity);
   }
 `;
 
@@ -257,7 +260,8 @@ function createParticleSystem() {
       projectionFactor: { value: params.projectionFactor },
       sharpness: { value: params.sharpness },
       glowIntensity: { value: params.glowIntensity },
-      blendFactor: { value: params.blendFactor }
+      blendFactor: { value: params.blendFactor },
+      opacity: { value: params.opacity }
     },
     transparent: true,
     depthWrite: false,
@@ -358,6 +362,12 @@ function createGUI() {
     .name('Blend Intensity')
     .onChange((value: number) => {
       material.uniforms.blendFactor.value = value;
+    });
+  
+  appearanceFolder.add(params, 'opacity', 0, 1, 0.01)
+    .name('Opacity')
+    .onChange((value: number) => {
+      material.uniforms.opacity.value = value;
     });
   
   appearanceFolder.open();
