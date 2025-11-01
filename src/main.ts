@@ -27,6 +27,8 @@ interface SimulationParams {
   glowIntensity: number;
   blendFactor: number;
   opacity: number;
+  blendingMode: string;
+  depthWrite: boolean;
 }
 
 const params: SimulationParams = {
@@ -41,7 +43,9 @@ const params: SimulationParams = {
   sharpness: 0.3,
   glowIntensity: 1.0,
   blendFactor: 1.0,
-  opacity: 1.0
+  opacity: 1.0,
+  blendingMode: 'Additive',
+  depthWrite: false
 };
 
 // ============================================================================
@@ -315,6 +319,25 @@ function createEnvironment() {
 }
 
 // ============================================================================
+// Blending Mode Helper
+// ============================================================================
+
+function getBlendingMode(mode: string): THREE.Blending {
+  switch (mode) {
+    case 'Normal':
+      return THREE.NormalBlending;
+    case 'Additive':
+      return THREE.AdditiveBlending;
+    case 'Subtractive':
+      return THREE.SubtractiveBlending;
+    case 'Multiply':
+      return THREE.MultiplyBlending;
+    default:
+      return THREE.AdditiveBlending;
+  }
+}
+
+// ============================================================================
 // GUI Controls
 // ============================================================================
 
@@ -381,6 +404,20 @@ function createGUI() {
     .name('Opacity')
     .onChange((value: number) => {
       material.uniforms.opacity.value = value;
+    });
+  
+  appearanceFolder.add(params, 'blendingMode', ['Normal', 'Additive', 'Subtractive', 'Multiply'])
+    .name('Blending Mode')
+    .onChange((value: string) => {
+      material.blending = getBlendingMode(value);
+      material.needsUpdate = true;
+    });
+  
+  appearanceFolder.add(params, 'depthWrite')
+    .name('Depth Write')
+    .onChange((value: boolean) => {
+      material.depthWrite = value;
+      material.needsUpdate = true;
     });
   
   appearanceFolder.open();
