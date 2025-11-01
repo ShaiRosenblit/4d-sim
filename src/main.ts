@@ -46,8 +46,8 @@ const vertexShader = `
   
   // Uniforms for animation and rotation
   uniform float time;
-  uniform float rotationSpeedXY;
-  uniform float rotationSpeedZW;
+  uniform float angleXY;
+  uniform float angleZW;
   uniform float spread;
   uniform float projectionFactor;
   uniform float colorAnimationSpeed;
@@ -84,10 +84,7 @@ const vertexShader = `
     // Start with 4D position
     vec4 pos4D = position4D * spread;
     
-    // Apply 4D rotations
-    float angleXY = time * rotationSpeedXY;
-    float angleZW = time * rotationSpeedZW;
-    
+    // Apply 4D rotations using accumulated angles
     pos4D = rotateXY(pos4D, angleXY);
     pos4D = rotateZW(pos4D, angleZW);
     
@@ -156,6 +153,8 @@ let points: THREE.Points;
 let material: THREE.ShaderMaterial;
 let gui: GUI;
 let time = 0;
+let angleXY = 0;
+let angleZW = 0;
 
 function initScene() {
   // Create scene
@@ -237,8 +236,8 @@ function createParticleSystem() {
     fragmentShader,
     uniforms: {
       time: { value: 0 },
-      rotationSpeedXY: { value: params.rotationSpeedXY },
-      rotationSpeedZW: { value: params.rotationSpeedZW },
+      angleXY: { value: 0 },
+      angleZW: { value: 0 },
       particleSize: { value: params.particleSize },
       spread: { value: params.spread },
       colorIntensity: { value: params.colorIntensity },
@@ -293,16 +292,10 @@ function createGUI() {
   
   const rotationFolder = gui.addFolder('Rotation');
   rotationFolder.add(params, 'rotationSpeedXY', 0, 2, 0.01)
-    .name('XY Speed')
-    .onChange((value: number) => {
-      material.uniforms.rotationSpeedXY.value = value;
-    });
+    .name('XY Speed');
   
   rotationFolder.add(params, 'rotationSpeedZW', 0, 2, 0.01)
-    .name('ZW Speed')
-    .onChange((value: number) => {
-      material.uniforms.rotationSpeedZW.value = value;
-    });
+    .name('ZW Speed');
   
   rotationFolder.open();
   
@@ -343,9 +336,18 @@ function createGUI() {
 function animate() {
   requestAnimationFrame(animate);
   
-  // Update time
+  // Update time for color animation
   time += 0.016 * params.timeScale; // ~60fps baseline
   material.uniforms.time.value = time;
+  
+  // Accumulate rotation angles smoothly based on current speeds
+  const delta = 0.016 * params.timeScale;
+  angleXY += delta * params.rotationSpeedXY;
+  angleZW += delta * params.rotationSpeedZW;
+  
+  // Update shader uniforms with accumulated angles
+  material.uniforms.angleXY.value = angleXY;
+  material.uniforms.angleZW.value = angleZW;
   
   // Update controls
   controls.update();
