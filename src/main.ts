@@ -219,11 +219,8 @@ function initScene() {
   controls.minDistance = 5;
   controls.maxDistance = 30;
   
-  // Disable orbit controls on mobile when using device orientation
+  // Check if mobile device
   isMobile = isMobileDevice();
-  if (isMobile) {
-    controls.enabled = false; // Will be re-enabled if user doesn't want orientation
-  }
 }
 
 // ============================================================================
@@ -447,22 +444,40 @@ function animate() {
   
   // Apply device orientation to camera if enabled
   if (deviceOrientationEnabled && isMobile) {
-    // Convert device orientation to camera rotation
-    // Beta: front-to-back tilt (pitch)
-    // Gamma: left-to-right tilt (roll)
-    // Alpha: compass direction (yaw)
+    // Convert device orientation to orbit angles
+    // Beta controls vertical rotation (pitch): -180 to 180
+    // Gamma controls horizontal rotation (yaw): -90 to 90
     
-    const alphaRad = THREE.MathUtils.degToRad(deviceAlpha);
-    const betaRad = THREE.MathUtils.degToRad(deviceBeta);
-    const gammaRad = THREE.MathUtils.degToRad(deviceGamma);
+    // Map beta (tilt forward/back) to polar angle
+    // When device is held upright (beta = 0), look at scene
+    // When tilted forward (beta = 90), look down
+    // When tilted back (beta = -90), look up
+    const targetPolarAngle = THREE.MathUtils.degToRad(90 - deviceBeta);
     
-    // Apply rotation to camera
-    camera.rotation.order = 'YXZ';
-    camera.rotation.set(
-      betaRad - Math.PI / 2,  // Pitch (adjust for default orientation)
-      alphaRad,               // Yaw
-      -gammaRad               // Roll (negative for natural feel)
-    );
+    // Map gamma (tilt left/right) to azimuthal angle
+    // When device is level (gamma = 0), face forward
+    // When tilted left (gamma < 0), rotate camera left
+    // When tilted right (gamma > 0), rotate camera right
+    const targetAzimuthalAngle = THREE.MathUtils.degToRad(deviceGamma);
+    
+    // Smoothly interpolate to target angles
+    const smoothing = 0.1;
+    const currentPolar = controls.getPolarAngle();
+    const currentAzimuthal = controls.getAzimuthalAngle();
+    
+    const newPolar = currentPolar + (targetPolarAngle - currentPolar) * smoothing;
+    const newAzimuthal = currentAzimuthal + (targetAzimuthalAngle - currentAzimuthal) * smoothing;
+    
+    // Calculate new camera position based on spherical coordinates
+    const radius = camera.position.distanceTo(controls.target);
+    const x = radius * Math.sin(newPolar) * Math.sin(newAzimuthal);
+    const y = radius * Math.cos(newPolar);
+    const z = radius * Math.sin(newPolar) * Math.cos(newAzimuthal);
+    
+    camera.position.set(x, y, z);
+    camera.lookAt(controls.target);
+    
+    controls.update();
   } else {
     // Update orbit controls when not using device orientation
     controls.update();
@@ -573,7 +588,7 @@ function init() {
       orientationButton.addEventListener('click', async () => {
         const granted = await requestOrientationPermission();
         if (granted) {
-          controls.enabled = false; // Disable orbit controls
+          // Keep orbit controls enabled for smooth updates
           orientationButton.style.display = 'none';
         }
       });
