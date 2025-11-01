@@ -3,11 +3,17 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import GUI from 'lil-gui';
 
 /**
- * 4D Wave Simulation
+ * 4D Simulation - Wave & Indra's Net
  * 
- * This application visualizes a 4D wave effect projected into 3D space.
- * Points rotate in both XY and ZW planes simultaneously, creating a mesmerizing
- * hyperdimensional effect when projected down to 3D.
+ * This application offers two visualization modes:
+ * 
+ * 1. 4D Wave: Visualizes a 4D wave effect projected into 3D space.
+ *    Points rotate in both XY and ZW planes simultaneously, creating a mesmerizing
+ *    hyperdimensional effect when projected down to 3D.
+ * 
+ * 2. Indra's Net: Inspired by the Buddhist metaphor, this mode creates a network
+ *    of mirror-like particles that reflect each other and colored light sources,
+ *    demonstrating interconnectedness and infinite reflection.
  */
 
 // ============================================================================
@@ -15,6 +21,8 @@ import GUI from 'lil-gui';
 // ============================================================================
 
 interface SimulationParams {
+  mode: '4d-wave' | 'indras-net';
+  particleCount: number;
   rotationSpeedXY: number;
   rotationSpeedZW: number;
   particleSize: number;
@@ -29,9 +37,16 @@ interface SimulationParams {
   opacity: number;
   blendingMode: string;
   depthWrite: boolean;
+  // Indra's Net specific parameters
+  reflectionStrength: number;
+  reflectionRange: number;
+  lightIntensity: number;
+  lightSpeed: number;
 }
 
 const params: SimulationParams = {
+  mode: '4d-wave',
+  particleCount: 8000,
   rotationSpeedXY: 0.11,
   rotationSpeedZW: 0.08,
   particleSize: 3.0,
@@ -45,7 +60,12 @@ const params: SimulationParams = {
   blendFactor: 1.0,
   opacity: 1.0,
   blendingMode: 'Normal',
-  depthWrite: false
+  depthWrite: false,
+  // Indra's Net specific parameters
+  reflectionStrength: 1.5,
+  reflectionRange: 5.0,
+  lightIntensity: 2.0,
+  lightSpeed: 0.3
 };
 
 // ============================================================================
@@ -161,6 +181,117 @@ const fragmentShader = `
 `;
 
 // ============================================================================
+// Indra's Net Shader Code
+// ============================================================================
+
+const indraVertexShader = `
+  attribute vec3 position;
+  attribute vec3 particlePositions; // All particle positions for reflection calculation
+  
+  uniform float time;
+  uniform vec3 lightPosition1;
+  uniform vec3 lightPosition2;
+  uniform vec3 lightPosition3;
+  uniform vec3 lightColor1;
+  uniform vec3 lightColor2;
+  uniform vec3 lightColor3;
+  uniform float reflectionStrength;
+  uniform float reflectionRange;
+  uniform float lightIntensity;
+  
+  varying vec3 vColor;
+  varying vec3 vPosition;
+  
+  void main() {
+    vPosition = position;
+    
+    // Calculate direct lighting from light sources
+    vec3 directLight = vec3(0.0);
+    
+    // Light 1
+    vec3 toLight1 = lightPosition1 - position;
+    float dist1 = length(toLight1);
+    float attenuation1 = lightIntensity / (1.0 + dist1 * dist1 * 0.1);
+    directLight += lightColor1 * attenuation1;
+    
+    // Light 2
+    vec3 toLight2 = lightPosition2 - position;
+    float dist2 = length(toLight2);
+    float attenuation2 = lightIntensity / (1.0 + dist2 * dist2 * 0.1);
+    directLight += lightColor2 * attenuation2;
+    
+    // Light 3
+    vec3 toLight3 = lightPosition3 - position;
+    float dist3 = length(toLight3);
+    float attenuation3 = lightIntensity / (1.0 + dist3 * dist3 * 0.1);
+    directLight += lightColor3 * attenuation3;
+    
+    // Start with direct light color
+    vColor = directLight;
+    
+    // Standard transformation
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
+    gl_PointSize = 400.0 / -mvPosition.z;
+  }
+`;
+
+const indraFragmentShader = `
+  uniform float sharpness;
+  uniform float opacity;
+  uniform float reflectionStrength;
+  
+  varying vec3 vColor;
+  varying vec3 vPosition;
+  
+  void main() {
+    // Create circular points with mirror-like appearance
+    vec2 center = gl_PointCoord - vec2(0.5);
+    float dist = length(center);
+    if (dist > 0.5) discard;
+    
+    // Sharp, mirror-like edge
+    float innerRadius = mix(0.35, 0.48, sharpness);
+    float alpha = 1.0 - smoothstep(innerRadius, 0.5, dist);
+    
+    // Create mirror surface with radial gradient
+    // Center is brightest (most reflective)
+    float mirror = 1.0 - dist * 1.8;
+    mirror = max(0.0, mirror);
+    mirror = pow(mirror, 1.5); // Sharper falloff for mirror effect
+    
+    // Base reflection color from lights
+    vec3 baseReflection = vColor * reflectionStrength;
+    
+    // Add colored fringes to simulate chromatic aberration in reflections
+    // This creates a jewel-like quality
+    vec2 offset = center * 2.0;
+    vec3 chromaticReflection = vec3(
+      baseReflection.r * (1.0 + offset.x * 0.2),
+      baseReflection.g * (1.0 + offset.y * 0.2),
+      baseReflection.b * (1.0 - length(offset) * 0.1)
+    );
+    
+    // Apply mirror enhancement
+    vec3 finalColor = chromaticReflection * (0.3 + mirror * 2.0);
+    
+    // Add strong specular highlight to simulate perfect reflection
+    float specular = pow(1.0 - dist * 2.0, 12.0);
+    finalColor += vec3(1.0) * specular * 1.5;
+    
+    // Add secondary softer glow for ambient reflection
+    float ambientGlow = pow(1.0 - dist * 1.5, 3.0);
+    finalColor += vColor * ambientGlow * 0.3;
+    
+    // Subtle rim lighting to enhance 3D appearance
+    float rim = smoothstep(0.3, 0.5, dist);
+    finalColor += vColor * rim * 0.2;
+    
+    gl_FragColor = vec4(finalColor, alpha * opacity);
+  }
+`;
+
+// ============================================================================
 // Scene Setup
 // ============================================================================
 
@@ -174,6 +305,16 @@ let gui: GUI;
 let time = 0;
 let angleXY = 0;
 let angleZW = 0;
+
+// Light sources for Indra's Net mode
+let lightPositions = {
+  light1: new THREE.Vector3(),
+  light2: new THREE.Vector3(),
+  light3: new THREE.Vector3()
+};
+
+// Light visualizer meshes
+let lightMeshes: THREE.Mesh[] = [];
 
 // Device orientation control
 let deviceOrientationEnabled = false;
@@ -227,13 +368,23 @@ function initScene() {
 // ============================================================================
 
 function createParticleSystem() {
-  // Generate 3D lattice of 4D points
-  const gridSize = 20; // 20x20x20 = 8000 particles
+  if (params.mode === '4d-wave') {
+    create4DWaveParticles();
+  } else {
+    createIndrasNetParticles();
+  }
+}
+
+function create4DWaveParticles() {
+  // Calculate grid size from particle count
+  const gridSize = Math.ceil(Math.pow(params.particleCount, 1/3));
   const positions4D: number[] = [];
   
   for (let x = 0; x < gridSize; x++) {
     for (let y = 0; y < gridSize; y++) {
       for (let z = 0; z < gridSize; z++) {
+        if (positions4D.length / 4 >= params.particleCount) break;
+        
         // Map to range [-1, 1]
         const px = (x / (gridSize - 1)) * 2 - 1;
         const py = (y / (gridSize - 1)) * 2 - 1;
@@ -244,7 +395,9 @@ function createParticleSystem() {
         
         positions4D.push(px, py, pz, pw);
       }
+      if (positions4D.length / 4 >= params.particleCount) break;
     }
+    if (positions4D.length / 4 >= params.particleCount) break;
   }
   
   // Create buffer geometry
@@ -279,6 +432,62 @@ function createParticleSystem() {
     transparent: true,
     depthWrite: params.depthWrite,
     blending: getBlendingMode(params.blendingMode)
+  });
+  
+  // Create points
+  points = new THREE.Points(geometry, material);
+  scene.add(points);
+}
+
+function createIndrasNetParticles() {
+  // Create particle positions in a 3D grid
+  const gridSize = Math.ceil(Math.pow(params.particleCount, 1/3));
+  const positions: number[] = [];
+  const spacing = 2.0;
+  
+  for (let x = 0; x < gridSize; x++) {
+    for (let y = 0; y < gridSize; y++) {
+      for (let z = 0; z < gridSize; z++) {
+        if (positions.length / 3 >= params.particleCount) break;
+        
+        // Map to range centered at origin
+        const px = (x / (gridSize - 1) - 0.5) * gridSize * spacing;
+        const py = (y / (gridSize - 1) - 0.5) * gridSize * spacing;
+        const pz = (z / (gridSize - 1) - 0.5) * gridSize * spacing;
+        
+        positions.push(px, py, pz);
+      }
+      if (positions.length / 3 >= params.particleCount) break;
+    }
+    if (positions.length / 3 >= params.particleCount) break;
+  }
+  
+  // Create buffer geometry
+  const geometry = new THREE.BufferGeometry();
+  const positionArray = new Float32Array(positions);
+  geometry.setAttribute('position', new THREE.BufferAttribute(positionArray, 3));
+  
+  // Create shader material for Indra's Net
+  material = new THREE.ShaderMaterial({
+    vertexShader: indraVertexShader,
+    fragmentShader: indraFragmentShader,
+    uniforms: {
+      time: { value: 0 },
+      lightPosition1: { value: lightPositions.light1 },
+      lightPosition2: { value: lightPositions.light2 },
+      lightPosition3: { value: lightPositions.light3 },
+      lightColor1: { value: new THREE.Color(1.0, 0.3, 0.3) },
+      lightColor2: { value: new THREE.Color(0.3, 1.0, 0.3) },
+      lightColor3: { value: new THREE.Color(0.3, 0.3, 1.0) },
+      reflectionStrength: { value: params.reflectionStrength },
+      reflectionRange: { value: params.reflectionRange },
+      lightIntensity: { value: params.lightIntensity },
+      sharpness: { value: params.sharpness },
+      opacity: { value: params.opacity }
+    },
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
   });
   
   // Create points
@@ -337,23 +546,98 @@ function getBlendingMode(mode: string): THREE.Blending {
 // GUI Controls
 // ============================================================================
 
+function createLightVisualizers() {
+  // Remove old light meshes if they exist
+  removeLightVisualizers();
+  
+  const lightColors = [
+    new THREE.Color(1.0, 0.3, 0.3),
+    new THREE.Color(0.3, 1.0, 0.3),
+    new THREE.Color(0.3, 0.3, 1.0)
+  ];
+  
+  for (let i = 0; i < 3; i++) {
+    const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+    const material = new THREE.MeshBasicMaterial({
+      color: lightColors[i],
+      transparent: true,
+      opacity: 0.8
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    lightMeshes.push(mesh);
+    scene.add(mesh);
+  }
+}
+
+function removeLightVisualizers() {
+  lightMeshes.forEach(mesh => {
+    scene.remove(mesh);
+    mesh.geometry.dispose();
+    (mesh.material as THREE.Material).dispose();
+  });
+  lightMeshes = [];
+}
+
+function recreateParticleSystem() {
+  // Remove old particle system
+  if (points) {
+    scene.remove(points);
+    points.geometry.dispose();
+    material.dispose();
+  }
+  
+  // Create new particle system
+  createParticleSystem();
+  
+  // Handle light visualizers for Indra's Net mode
+  if (params.mode === 'indras-net') {
+    createLightVisualizers();
+  } else {
+    removeLightVisualizers();
+  }
+  
+  // Update GUI visibility based on mode
+  updateGUIForMode();
+  
+  console.log('✨ Switched to', params.mode, 'mode with', points.geometry.attributes.position.count, 'particles');
+}
+
+function updateGUIForMode() {
+  // This will be called to show/hide mode-specific controls
+  // Implementation will be added with GUI creation
+}
+
 function createGUI() {
   gui = new GUI();
-  gui.title('4D Wave Controls');
+  gui.title('Simulation Controls');
   
   // Hide GUI on mobile by default
   if (isMobile) {
     gui.domElement.classList.add('hidden-mobile');
   }
   
-  const rotationFolder = gui.addFolder('Rotation');
+  // Mode selector at the top
+  gui.add(params, 'mode', ['4d-wave', 'indras-net'])
+    .name('Mode')
+    .onChange(() => {
+      recreateParticleSystem();
+    });
+  
+  // Particle count control (applies to both modes)
+  gui.add(params, 'particleCount', 50, 8000, 50)
+    .name('Particle Count')
+    .onChange(() => {
+      recreateParticleSystem();
+    });
+  
+  const rotationFolder = gui.addFolder('Rotation (4D Mode)');
   rotationFolder.add(params, 'rotationSpeedXY', 0, 2, 0.01)
     .name('XY Speed');
   
   rotationFolder.add(params, 'rotationSpeedZW', 0, 2, 0.01)
     .name('ZW Speed');
   
-  rotationFolder.open();
+  rotationFolder.close();
   
   const visualFolder = gui.addFolder('Visual');
   visualFolder.add(params, 'spread', 1, 10, 0.1)
@@ -424,6 +708,37 @@ function createGUI() {
   appearanceFolder.open();
   
   gui.add(params, 'timeScale', 0, 3, 0.1).name('Time Scale');
+  
+  // Indra's Net specific controls
+  const indraFolder = gui.addFolder("Indra's Net");
+  indraFolder.add(params, 'reflectionStrength', 0, 2, 0.1)
+    .name('Reflection Strength')
+    .onChange((value: number) => {
+      if (material.uniforms.reflectionStrength) {
+        material.uniforms.reflectionStrength.value = value;
+      }
+    });
+  
+  indraFolder.add(params, 'reflectionRange', 1, 10, 0.5)
+    .name('Reflection Range')
+    .onChange((value: number) => {
+      if (material.uniforms.reflectionRange) {
+        material.uniforms.reflectionRange.value = value;
+      }
+    });
+  
+  indraFolder.add(params, 'lightIntensity', 0, 3, 0.1)
+    .name('Light Intensity')
+    .onChange((value: number) => {
+      if (material.uniforms.lightIntensity) {
+        material.uniforms.lightIntensity.value = value;
+      }
+    });
+  
+  indraFolder.add(params, 'lightSpeed', 0, 2, 0.1)
+    .name('Light Speed');
+  
+  indraFolder.close();
 }
 
 // ============================================================================
@@ -437,14 +752,56 @@ function animate() {
   time += 0.016 * params.timeScale; // ~60fps baseline
   material.uniforms.time.value = time;
   
-  // Accumulate rotation angles smoothly based on current speeds
-  const delta = 0.016 * params.timeScale;
-  angleXY += delta * params.rotationSpeedXY;
-  angleZW += delta * params.rotationSpeedZW;
-  
-  // Update shader uniforms with accumulated angles
-  material.uniforms.angleXY.value = angleXY;
-  material.uniforms.angleZW.value = angleZW;
+  if (params.mode === '4d-wave') {
+    // Accumulate rotation angles smoothly based on current speeds
+    const delta = 0.016 * params.timeScale;
+    angleXY += delta * params.rotationSpeedXY;
+    angleZW += delta * params.rotationSpeedZW;
+    
+    // Update shader uniforms with accumulated angles
+    if (material.uniforms.angleXY) {
+      material.uniforms.angleXY.value = angleXY;
+    }
+    if (material.uniforms.angleZW) {
+      material.uniforms.angleZW.value = angleZW;
+    }
+  } else if (params.mode === 'indras-net') {
+    // Animate light positions in orbit patterns
+    const radius = 15;
+    const speed = params.lightSpeed;
+    
+    lightPositions.light1.set(
+      Math.cos(time * speed) * radius,
+      Math.sin(time * speed * 0.7) * radius * 0.5,
+      Math.sin(time * speed) * radius
+    );
+    
+    lightPositions.light2.set(
+      Math.sin(time * speed * 0.8) * radius,
+      Math.cos(time * speed * 0.6) * radius,
+      Math.cos(time * speed * 0.8) * radius * 0.7
+    );
+    
+    lightPositions.light3.set(
+      Math.sin(time * speed * 1.2) * radius * 0.8,
+      Math.sin(time * speed) * radius * 0.6,
+      Math.cos(time * speed * 1.2) * radius
+    );
+    
+    // Update uniforms
+    if (material.uniforms.lightPosition1) {
+      material.uniforms.lightPosition1.value = lightPositions.light1;
+      material.uniforms.lightPosition2.value = lightPositions.light2;
+      material.uniforms.lightPosition3.value = lightPositions.light3;
+    }
+    
+    // Update light visualizer positions
+    if (lightMeshes.length === 3) {
+      lightMeshes[0].position.copy(lightPositions.light1);
+      lightMeshes[1].position.copy(lightPositions.light2);
+      lightMeshes[2].position.copy(lightPositions.light3);
+    }
+  }
   
   // Apply device orientation to camera if enabled
   if (deviceOrientationEnabled && isMobile) {
@@ -569,7 +926,7 @@ function setupWarningOverlay() {
 // ============================================================================
 
 function init() {
-  console.log('🌌 Initializing 4D Wave Simulation...');
+  console.log('🌌 Initializing Simulation...');
   
   // Setup warning overlay
   setupWarningOverlay();
@@ -618,7 +975,11 @@ function init() {
   }
   
   console.log('✨ Simulation ready!');
-  console.log('📊 Particle count:', points.geometry.attributes.position4D.count);
+  const particleCount = params.mode === '4d-wave' 
+    ? points.geometry.attributes.position4D?.count 
+    : points.geometry.attributes.position?.count;
+  console.log('📊 Particle count:', particleCount);
+  console.log('🎨 Mode:', params.mode);
   if (isMobile) {
     console.log('📱 Mobile device detected - orientation controls available');
   }
