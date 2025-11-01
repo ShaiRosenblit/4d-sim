@@ -23,6 +23,9 @@ interface SimulationParams {
   colorAnimationSpeed: number;
   timeScale: number;
   projectionFactor: number;
+  sharpness: number;
+  glowIntensity: number;
+  blendFactor: number;
 }
 
 const params: SimulationParams = {
@@ -33,7 +36,10 @@ const params: SimulationParams = {
   colorIntensity: 1.0,
   colorAnimationSpeed: 0.5,
   timeScale: 1.0,
-  projectionFactor: 0.5
+  projectionFactor: 0.5,
+  sharpness: 0.3,
+  glowIntensity: 1.0,
+  blendFactor: 1.0
 };
 
 // ============================================================================
@@ -118,6 +124,9 @@ const vertexShader = `
 const fragmentShader = `
   uniform float colorIntensity;
   uniform float particleSize;
+  uniform float sharpness;
+  uniform float glowIntensity;
+  uniform float blendFactor;
   
   varying vec3 vColor;
   varying float vIntensity;
@@ -128,16 +137,19 @@ const fragmentShader = `
     float dist = length(center);
     if (dist > 0.5) discard;
     
-    // Soft edge falloff
-    float alpha = 1.0 - smoothstep(0.3, 0.5, dist);
+    // Soft edge falloff with dynamic sharpness
+    // sharpness: 0 = very blurry (0.1 to 0.5), 1 = sharp (0.45 to 0.5)
+    float innerRadius = mix(0.1, 0.45, sharpness);
+    float alpha = 1.0 - smoothstep(innerRadius, 0.5, dist);
     
     // Apply color with intensity modulation
     vec3 finalColor = vColor * colorIntensity * vIntensity;
     
-    // Add glow effect
-    finalColor += vec3(0.2, 0.2, 0.3) * (1.0 - dist * 2.0);
+    // Add glow effect with controllable intensity
+    finalColor += vec3(0.2, 0.2, 0.3) * (1.0 - dist * 2.0) * glowIntensity;
     
-    gl_FragColor = vec4(finalColor, alpha);
+    // Apply blend factor to simulate blend mode interpolation
+    gl_FragColor = vec4(finalColor, alpha * blendFactor);
   }
 `;
 
@@ -242,7 +254,10 @@ function createParticleSystem() {
       spread: { value: params.spread },
       colorIntensity: { value: params.colorIntensity },
       colorAnimationSpeed: { value: params.colorAnimationSpeed },
-      projectionFactor: { value: params.projectionFactor }
+      projectionFactor: { value: params.projectionFactor },
+      sharpness: { value: params.sharpness },
+      glowIntensity: { value: params.glowIntensity },
+      blendFactor: { value: params.blendFactor }
     },
     transparent: true,
     depthWrite: false,
@@ -325,6 +340,27 @@ function createGUI() {
     });
   
   visualFolder.open();
+  
+  const appearanceFolder = gui.addFolder('Particle Appearance');
+  appearanceFolder.add(params, 'sharpness', 0, 1, 0.01)
+    .name('Sharpness')
+    .onChange((value: number) => {
+      material.uniforms.sharpness.value = value;
+    });
+  
+  appearanceFolder.add(params, 'glowIntensity', 0, 2, 0.1)
+    .name('Glow Intensity')
+    .onChange((value: number) => {
+      material.uniforms.glowIntensity.value = value;
+    });
+  
+  appearanceFolder.add(params, 'blendFactor', 0, 1, 0.01)
+    .name('Blend Intensity')
+    .onChange((value: number) => {
+      material.uniforms.blendFactor.value = value;
+    });
+  
+  appearanceFolder.open();
   
   gui.add(params, 'timeScale', 0, 3, 0.1).name('Time Scale');
 }
