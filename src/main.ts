@@ -46,7 +46,7 @@ interface SimulationParams {
 
 const params: SimulationParams = {
   mode: '4d-wave',
-  particleCount: 8000,
+  particleCount: 1000,
   rotationSpeedXY: 0.11,
   rotationSpeedZW: 0.08,
   particleSize: 3.0,
@@ -232,7 +232,7 @@ const indraVertexShader = `
     // Standard transformation
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mvPosition;
-    gl_PointSize = 400.0 / -mvPosition.z;
+    gl_PointSize = 100.0 / -mvPosition.z;
   }
 `;
 
@@ -443,14 +443,14 @@ function createIndrasNetParticles() {
   // Create particle positions in a 3D grid
   const gridSize = Math.ceil(Math.pow(params.particleCount, 1/3));
   const positions: number[] = [];
-  const spacing = 2.0;
+  const spacing = 0.5; // Much smaller spacing for better visualization
   
   for (let x = 0; x < gridSize; x++) {
     for (let y = 0; y < gridSize; y++) {
       for (let z = 0; z < gridSize; z++) {
         if (positions.length / 3 >= params.particleCount) break;
         
-        // Map to range centered at origin
+        // Map to range centered at origin with tighter spacing
         const px = (x / (gridSize - 1) - 0.5) * gridSize * spacing;
         const py = (y / (gridSize - 1) - 0.5) * gridSize * spacing;
         const pz = (z / (gridSize - 1) - 0.5) * gridSize * spacing;
@@ -557,11 +557,11 @@ function createLightVisualizers() {
   ];
   
   for (let i = 0; i < 3; i++) {
-    const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+    const geometry = new THREE.SphereGeometry(0.3, 16, 16);
     const material = new THREE.MeshBasicMaterial({
       color: lightColors[i],
       transparent: true,
-      opacity: 0.8
+      opacity: 0.9
     });
     const mesh = new THREE.Mesh(geometry, material);
     lightMeshes.push(mesh);
@@ -592,8 +592,16 @@ function recreateParticleSystem() {
   // Handle light visualizers for Indra's Net mode
   if (params.mode === 'indras-net') {
     createLightVisualizers();
+    // Adjust camera for better view of Indra's net
+    camera.position.set(12, 12, 12);
+    camera.lookAt(0, 0, 0);
+    controls.update();
   } else {
     removeLightVisualizers();
+    // Reset camera for 4D wave mode
+    camera.position.set(8, 8, 8);
+    camera.lookAt(0, 0, 0);
+    controls.update();
   }
   
   // Update GUI visibility based on mode
@@ -767,7 +775,7 @@ function animate() {
     }
   } else if (params.mode === 'indras-net') {
     // Animate light positions in orbit patterns
-    const radius = 15;
+    const radius = 8; // Adjusted for smaller particle grid
     const speed = params.lightSpeed;
     
     lightPositions.light1.set(
