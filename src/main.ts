@@ -177,7 +177,6 @@ let angleZW = 0;
 
 // Device orientation control
 let deviceOrientationEnabled = false;
-let deviceAlpha = 0;
 let deviceBeta = 0;
 let deviceGamma = 0;
 let isMobile = false;
@@ -534,8 +533,7 @@ async function requestOrientationPermission(): Promise<boolean> {
 
 function setupDeviceOrientation() {
   window.addEventListener('deviceorientation', (event) => {
-    if (deviceOrientationEnabled && event.alpha !== null && event.beta !== null && event.gamma !== null) {
-      deviceAlpha = event.alpha; // 0-360 degrees (compass direction)
+    if (deviceOrientationEnabled && event.beta !== null && event.gamma !== null) {
       deviceBeta = event.beta;   // -180 to 180 degrees (front-to-back tilt)
       deviceGamma = event.gamma; // -90 to 90 degrees (left-to-right tilt)
     }
