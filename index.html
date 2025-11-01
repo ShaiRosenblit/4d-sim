@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4D Wave Simulation</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Photosensitivity Warning Overlay */
+    #warning-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.3s ease;
+    }
+
+    #warning-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .warning-content {
+      max-width: 500px;
+      padding: 40px;
+      background: #1a1a1a;
+      border-radius: 12px;
+      border: 2px solid #333;
+      text-align: center;
+    }
+
+    .warning-content h2 {
+      color: #ff6b6b;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    .warning-content p {
+      color: #ddd;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    .warning-content button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .warning-content button:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <!-- Photosensitivity Warning -->
+  <div id="warning-overlay">
+    <div class="warning-content">
+      <h2>⚠️ Photosensitivity Warning</h2>
+      <p>
+        This experience contains flashing lights and rapidly changing colors that may trigger seizures in people with photosensitive epilepsy.
+      </p>
+      <p>
+        Viewer discretion is advised.
+      </p>
+      <button id="dismiss-warning">I Understand, Continue</button>
+    </div>
+  </div>
+
+  <!-- Main Canvas -->
+  <canvas id="canvas"></canvas>
+
+  <!-- Load Application -->
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
+
