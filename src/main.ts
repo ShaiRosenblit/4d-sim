@@ -62,9 +62,9 @@ const params: SimulationParams = {
   blendingMode: 'Normal',
   depthWrite: false,
   // Indra's Net specific parameters
-  reflectionStrength: 1.5,
+  reflectionStrength: 2.5,
   reflectionRange: 5.0,
-  lightIntensity: 2.0,
+  lightIntensity: 3.0,
   lightSpeed: 0.3
 };
 
@@ -186,7 +186,6 @@ const fragmentShader = `
 
 const indraVertexShader = `
   attribute vec3 position;
-  attribute vec3 particlePositions; // All particle positions for reflection calculation
   
   uniform float time;
   uniform vec3 lightPosition1;
@@ -198,39 +197,33 @@ const indraVertexShader = `
   uniform float reflectionStrength;
   uniform float reflectionRange;
   uniform float lightIntensity;
+  uniform mat4 viewMatrix;
   
   varying vec3 vColor;
   varying vec3 vPosition;
+  varying vec3 vNormal;
+  varying vec3 vViewPosition;
+  varying vec3 vLightPos1;
+  varying vec3 vLightPos2;
+  varying vec3 vLightPos3;
+  varying vec3 vLightColor1;
+  varying vec3 vLightColor2;
+  varying vec3 vLightColor3;
   
   void main() {
     vPosition = position;
     
-    // Calculate direct lighting from light sources
-    vec3 directLight = vec3(0.0);
-    
-    // Light 1
-    vec3 toLight1 = lightPosition1 - position;
-    float dist1 = length(toLight1);
-    float attenuation1 = lightIntensity / (1.0 + dist1 * dist1 * 0.1);
-    directLight += lightColor1 * attenuation1;
-    
-    // Light 2
-    vec3 toLight2 = lightPosition2 - position;
-    float dist2 = length(toLight2);
-    float attenuation2 = lightIntensity / (1.0 + dist2 * dist2 * 0.1);
-    directLight += lightColor2 * attenuation2;
-    
-    // Light 3
-    vec3 toLight3 = lightPosition3 - position;
-    float dist3 = length(toLight3);
-    float attenuation3 = lightIntensity / (1.0 + dist3 * dist3 * 0.1);
-    directLight += lightColor3 * attenuation3;
-    
-    // Start with direct light color
-    vColor = directLight;
+    // Pass light data to fragment shader for proper reflection calculation
+    vLightPos1 = lightPosition1;
+    vLightPos2 = lightPosition2;
+    vLightPos3 = lightPosition3;
+    vLightColor1 = lightColor1;
+    vLightColor2 = lightColor2;
+    vLightColor3 = lightColor3;
     
     // Standard transformation
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    vViewPosition = -mvPosition.xyz;
     gl_Position = projectionMatrix * mvPosition;
     gl_PointSize = 100.0 / -mvPosition.z;
   }
@@ -240,9 +233,17 @@ const indraFragmentShader = `
   uniform float sharpness;
   uniform float opacity;
   uniform float reflectionStrength;
+  uniform float lightIntensity;
   
   varying vec3 vColor;
   varying vec3 vPosition;
+  varying vec3 vViewPosition;
+  varying vec3 vLightPos1;
+  varying vec3 vLightPos2;
+  varying vec3 vLightPos3;
+  varying vec3 vLightColor1;
+  varying vec3 vLightColor2;
+  varying vec3 vLightColor3;
   
   void main() {
     // Create circular points with mirror-like appearance
@@ -254,38 +255,53 @@ const indraFragmentShader = `
     float innerRadius = mix(0.35, 0.48, sharpness);
     float alpha = 1.0 - smoothstep(innerRadius, 0.5, dist);
     
-    // Create mirror surface with radial gradient
-    // Center is brightest (most reflective)
-    float mirror = 1.0 - dist * 1.8;
-    mirror = max(0.0, mirror);
-    mirror = pow(mirror, 1.5); // Sharper falloff for mirror effect
+    // Calculate surface normal for the spherical point
+    // This makes each point act like a tiny sphere mirror
+    vec3 normal;
+    normal.xy = (gl_PointCoord - 0.5) * 2.0;
+    float r2 = dot(normal.xy, normal.xy);
+    if (r2 > 1.0) discard;
+    normal.z = sqrt(1.0 - r2);
     
-    // Base reflection color from lights
-    vec3 baseReflection = vColor * reflectionStrength;
+    // View direction (toward camera)
+    vec3 viewDir = normalize(vViewPosition);
     
-    // Add colored fringes to simulate chromatic aberration in reflections
-    // This creates a jewel-like quality
-    vec2 offset = center * 2.0;
-    vec3 chromaticReflection = vec3(
-      baseReflection.r * (1.0 + offset.x * 0.2),
-      baseReflection.g * (1.0 + offset.y * 0.2),
-      baseReflection.b * (1.0 - length(offset) * 0.1)
-    );
+    // Mirror base color (neutral silver/white)
+    vec3 mirrorBase = vec3(0.9, 0.9, 0.95);
     
-    // Apply mirror enhancement
-    vec3 finalColor = chromaticReflection * (0.3 + mirror * 2.0);
+    // Calculate reflections from each light source
+    vec3 reflectedColor = vec3(0.0);
     
-    // Add strong specular highlight to simulate perfect reflection
-    float specular = pow(1.0 - dist * 2.0, 12.0);
-    finalColor += vec3(1.0) * specular * 1.5;
+    // Light 1 reflection
+    vec3 lightDir1 = normalize(vLightPos1 - vPosition);
+    vec3 reflectDir1 = reflect(-lightDir1, normal);
+    float spec1 = pow(max(dot(reflectDir1, viewDir), 0.0), 32.0);
+    float dist1 = length(vLightPos1 - vPosition);
+    float attenuation1 = lightIntensity / (1.0 + dist1 * dist1 * 0.05);
+    reflectedColor += vLightColor1 * spec1 * attenuation1;
     
-    // Add secondary softer glow for ambient reflection
-    float ambientGlow = pow(1.0 - dist * 1.5, 3.0);
-    finalColor += vColor * ambientGlow * 0.3;
+    // Light 2 reflection
+    vec3 lightDir2 = normalize(vLightPos2 - vPosition);
+    vec3 reflectDir2 = reflect(-lightDir2, normal);
+    float spec2 = pow(max(dot(reflectDir2, viewDir), 0.0), 32.0);
+    float dist2 = length(vLightPos2 - vPosition);
+    float attenuation2 = lightIntensity / (1.0 + dist2 * dist2 * 0.05);
+    reflectedColor += vLightColor2 * spec2 * attenuation2;
     
-    // Subtle rim lighting to enhance 3D appearance
-    float rim = smoothstep(0.3, 0.5, dist);
-    finalColor += vColor * rim * 0.2;
+    // Light 3 reflection
+    vec3 lightDir3 = normalize(vLightPos3 - vPosition);
+    vec3 reflectDir3 = reflect(-lightDir3, normal);
+    float spec3 = pow(max(dot(reflectDir3, viewDir), 0.0), 32.0);
+    float dist3 = length(vLightPos3 - vPosition);
+    float attenuation3 = lightIntensity / (1.0 + dist3 * dist3 * 0.05);
+    reflectedColor += vLightColor3 * spec3 * attenuation3;
+    
+    // Combine mirror base with reflections
+    vec3 finalColor = mirrorBase * (0.15 + reflectedColor * reflectionStrength);
+    
+    // Add bright specular highlights for perfect mirror effect
+    float centerGlow = pow(1.0 - dist * 2.0, 16.0);
+    finalColor += mirrorBase * centerGlow * 0.8;
     
     gl_FragColor = vec4(finalColor, alpha * opacity);
   }
@@ -476,9 +492,9 @@ function createIndrasNetParticles() {
       lightPosition1: { value: lightPositions.light1 },
       lightPosition2: { value: lightPositions.light2 },
       lightPosition3: { value: lightPositions.light3 },
-      lightColor1: { value: new THREE.Color(1.0, 0.3, 0.3) },
-      lightColor2: { value: new THREE.Color(0.3, 1.0, 0.3) },
-      lightColor3: { value: new THREE.Color(0.3, 0.3, 1.0) },
+      lightColor1: { value: new THREE.Color(1.0, 0.2, 0.2) },
+      lightColor2: { value: new THREE.Color(0.2, 1.0, 0.2) },
+      lightColor3: { value: new THREE.Color(0.2, 0.2, 1.0) },
       reflectionStrength: { value: params.reflectionStrength },
       reflectionRange: { value: params.reflectionRange },
       lightIntensity: { value: params.lightIntensity },
@@ -487,7 +503,7 @@ function createIndrasNetParticles() {
     },
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending
+    blending: THREE.NormalBlending
   });
   
   // Create points
@@ -551,9 +567,9 @@ function createLightVisualizers() {
   removeLightVisualizers();
   
   const lightColors = [
-    new THREE.Color(1.0, 0.3, 0.3),
-    new THREE.Color(0.3, 1.0, 0.3),
-    new THREE.Color(0.3, 0.3, 1.0)
+    new THREE.Color(1.0, 0.2, 0.2),
+    new THREE.Color(0.2, 1.0, 0.2),
+    new THREE.Color(0.2, 0.2, 1.0)
   ];
   
   for (let i = 0; i < 3; i++) {
