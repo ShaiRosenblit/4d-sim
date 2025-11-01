@@ -171,6 +171,13 @@ let time = 0;
 let angleXY = 0;
 let angleZW = 0;
 
+// Device orientation control
+let deviceOrientationEnabled = false;
+let deviceAlpha = 0;
+let deviceBeta = 0;
+let deviceGamma = 0;
+let isMobile = false;
+
 function initScene() {
   // Create scene
   scene = new THREE.Scene();
@@ -207,6 +214,12 @@ function initScene() {
   controls.dampingFactor = 0.05;
   controls.minDistance = 5;
   controls.maxDistance = 30;
+  
+  // Disable orbit controls on mobile when using device orientation
+  isMobile = isMobileDevice();
+  if (isMobile) {
+    controls.enabled = false; // Will be re-enabled if user doesn't want orientation
+  }
 }
 
 // ============================================================================
@@ -395,8 +408,28 @@ function animate() {
   material.uniforms.angleXY.value = angleXY;
   material.uniforms.angleZW.value = angleZW;
   
-  // Update controls
-  controls.update();
+  // Apply device orientation to camera if enabled
+  if (deviceOrientationEnabled && isMobile) {
+    // Convert device orientation to camera rotation
+    // Beta: front-to-back tilt (pitch)
+    // Gamma: left-to-right tilt (roll)
+    // Alpha: compass direction (yaw)
+    
+    const alphaRad = THREE.MathUtils.degToRad(deviceAlpha);
+    const betaRad = THREE.MathUtils.degToRad(deviceBeta);
+    const gammaRad = THREE.MathUtils.degToRad(deviceGamma);
+    
+    // Apply rotation to camera
+    camera.rotation.order = 'YXZ';
+    camera.rotation.set(
+      betaRad - Math.PI / 2,  // Pitch (adjust for default orientation)
+      alphaRad,               // Yaw
+      -gammaRad               // Roll (negative for natural feel)
+    );
+  } else {
+    // Update orbit controls when not using device orientation
+    controls.update();
+  }
   
   // Render scene
   renderer.render(scene, camera);
@@ -410,6 +443,53 @@ function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// ============================================================================
+// Device Orientation Support
+// ============================================================================
+
+function isMobileDevice(): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    (window.innerWidth <= 768);
+}
+
+async function requestOrientationPermission(): Promise<boolean> {
+  // Check if DeviceOrientationEvent requires permission (iOS 13+)
+  if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+    try {
+      const permission = await (DeviceOrientationEvent as any).requestPermission();
+      if (permission === 'granted') {
+        deviceOrientationEnabled = true;
+        setupDeviceOrientation();
+        console.log('✅ Device orientation permission granted');
+        return true;
+      } else {
+        console.log('❌ Device orientation permission denied');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error requesting device orientation permission:', error);
+      return false;
+    }
+  } else {
+    // Non-iOS or older iOS - permission not required
+    deviceOrientationEnabled = true;
+    setupDeviceOrientation();
+    return true;
+  }
+}
+
+function setupDeviceOrientation() {
+  window.addEventListener('deviceorientation', (event) => {
+    if (deviceOrientationEnabled && event.alpha !== null && event.beta !== null && event.gamma !== null) {
+      deviceAlpha = event.alpha; // 0-360 degrees (compass direction)
+      deviceBeta = event.beta;   // -180 to 180 degrees (front-to-back tilt)
+      deviceGamma = event.gamma; // -90 to 90 degrees (left-to-right tilt)
+    }
+  }, true);
+  
+  console.log('📱 Device orientation controls enabled');
 }
 
 // ============================================================================
@@ -448,8 +528,26 @@ function init() {
   // Setup event listeners
   window.addEventListener('resize', onWindowResize);
   
+  // Setup device orientation for mobile
+  if (isMobile) {
+    const orientationButton = document.getElementById('enable-orientation');
+    if (orientationButton) {
+      orientationButton.style.display = 'block';
+      orientationButton.addEventListener('click', async () => {
+        const granted = await requestOrientationPermission();
+        if (granted) {
+          controls.enabled = false; // Disable orbit controls
+          orientationButton.style.display = 'none';
+        }
+      });
+    }
+  }
+  
   console.log('✨ Simulation ready!');
   console.log('📊 Particle count:', points.geometry.attributes.position4D.count);
+  if (isMobile) {
+    console.log('📱 Mobile device detected - orientation controls available');
+  }
 }
 
 // Start the application

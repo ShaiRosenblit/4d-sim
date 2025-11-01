@@ -79,6 +79,35 @@
     .warning-content button:hover {
       background: #45a049;
     }
+
+    /* Device Orientation Button */
+    #enable-orientation {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 12px 20px;
+      background: rgba(76, 175, 80, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      display: none;
+      z-index: 1000;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s;
+    }
+
+    #enable-orientation:hover {
+      background: rgba(76, 175, 80, 1);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    #enable-orientation:active {
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -95,6 +124,9 @@
       <button id="dismiss-warning">I Understand, Continue</button>
     </div>
   </div>
+
+  <!-- Device Orientation Button (shown only on mobile) -->
+  <button id="enable-orientation">📱 Enable Device Orientation</button>
 
   <!-- Main Canvas -->
   <canvas id="canvas"></canvas>
