@@ -25,6 +25,8 @@ interface SimulationParams {
   particleCount: number;
   rotationSpeedXY: number;
   rotationSpeedZW: number;
+  rotationActiveXY: boolean;
+  rotationActiveZW: boolean;
   particleSize: number;
   spread: number;
   colorIntensity: number;
@@ -37,6 +39,10 @@ interface SimulationParams {
   opacity: number;
   blendingMode: string;
   depthWrite: boolean;
+  // Matrix transformation parameters
+  matrix1: number[];
+  matrix2: number[];
+  interpolation: number;
   // Indra's Net specific parameters
   reflectionStrength: number;
   reflectionRange: number;
@@ -44,23 +50,39 @@ interface SimulationParams {
   lightSpeed: number;
 }
 
+// Helper function to create identity matrix
+function createIdentityMatrix(): number[] {
+  return [
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  ];
+}
+
 const params: SimulationParams = {
   mode: '4d-wave',
   particleCount: 1000,
-  rotationSpeedXY: 0.11,
-  rotationSpeedZW: 0.08,
+  rotationSpeedXY: 0.01,
+  rotationSpeedZW: 0.01,
+  rotationActiveXY: false,
+  rotationActiveZW: false,
   particleSize: 3.0,
-  spread: 8.5,
+  spread: 3.0,
   colorIntensity: 1.0,
   colorAnimationSpeed: 0.0,
   timeScale: 1.0,
-  projectionFactor: 0.5,
+  projectionFactor: 0.15,
   sharpness: 1.0,
   glowIntensity: 0.5,
   blendFactor: 1.0,
   opacity: 1.0,
   blendingMode: 'Normal',
   depthWrite: false,
+  // Matrix transformation parameters
+  matrix1: createIdentityMatrix(),
+  matrix2: createIdentityMatrix(),
+  interpolation: 0.5,
   // Indra's Net specific parameters
   reflectionStrength: 2.5,
   reflectionRange: 5.0,
@@ -83,6 +105,11 @@ const vertexShader = `
   uniform float spread;
   uniform float projectionFactor;
   uniform float colorAnimationSpeed;
+  
+  // Matrix transformation uniforms
+  uniform mat4 matrix1;
+  uniform mat4 matrix2;
+  uniform float interpolation;
   
   // Varying to pass color to fragment shader
   varying vec3 vColor;
@@ -112,9 +139,23 @@ const vertexShader = `
     );
   }
   
+  // Interpolate between two matrices
+  mat4 mixMatrix(mat4 m1, mat4 m2, float t) {
+    return mat4(
+      mix(m1[0], m2[0], t),
+      mix(m1[1], m2[1], t),
+      mix(m1[2], m2[2], t),
+      mix(m1[3], m2[3], t)
+    );
+  }
+  
   void main() {
-    // Start with 4D position
-    vec4 pos4D = position4D * spread;
+    // Start with normalized 4D position [-1, 1]
+    vec4 pos4D = position4D;
+    
+    // Apply interpolated matrix transformation
+    mat4 currentMatrix = mixMatrix(matrix1, matrix2, interpolation);
+    pos4D = currentMatrix * pos4D;
     
     // Apply 4D rotations using accumulated angles
     pos4D = rotateXY(pos4D, angleXY);
@@ -124,6 +165,9 @@ const vertexShader = `
     // The further away in the 4th dimension, the smaller it appears
     float wFactor = 1.0 + pos4D.w * projectionFactor;
     vec3 pos3D = pos4D.xyz / wFactor;
+    
+    // Apply spread scaling to final 3D positions
+    pos3D *= spread;
     
     // Calculate color based on 4D position with independent animation speed
     // Map 4D coordinates to RGB
@@ -392,24 +436,26 @@ function createParticleSystem() {
 }
 
 function create4DWaveParticles() {
-  // Calculate grid size from particle count
-  const gridSize = Math.ceil(Math.pow(params.particleCount, 1/3));
+  // Calculate grid size from particle count (4th root for 4D grid)
+  const gridSize = Math.ceil(Math.pow(params.particleCount, 1/4));
   const positions4D: number[] = [];
   
+  // Create a true 4D hypercube lattice
   for (let x = 0; x < gridSize; x++) {
     for (let y = 0; y < gridSize; y++) {
       for (let z = 0; z < gridSize; z++) {
+        for (let w = 0; w < gridSize; w++) {
+          if (positions4D.length / 4 >= params.particleCount) break;
+          
+          // Map all dimensions uniformly to range [-1, 1]
+          const px = (x / (gridSize - 1)) * 2 - 1;
+          const py = (y / (gridSize - 1)) * 2 - 1;
+          const pz = (z / (gridSize - 1)) * 2 - 1;
+          const pw = (w / (gridSize - 1)) * 2 - 1;
+          
+          positions4D.push(px, py, pz, pw);
+        }
         if (positions4D.length / 4 >= params.particleCount) break;
-        
-        // Map to range [-1, 1]
-        const px = (x / (gridSize - 1)) * 2 - 1;
-        const py = (y / (gridSize - 1)) * 2 - 1;
-        const pz = (z / (gridSize - 1)) * 2 - 1;
-        
-        // Generate 4th dimension using a wave pattern
-        const pw = Math.sin(px * Math.PI) * Math.sin(py * Math.PI) * Math.sin(pz * Math.PI);
-        
-        positions4D.push(px, py, pz, pw);
       }
       if (positions4D.length / 4 >= params.particleCount) break;
     }
@@ -443,7 +489,11 @@ function create4DWaveParticles() {
       sharpness: { value: params.sharpness },
       glowIntensity: { value: params.glowIntensity },
       blendFactor: { value: params.blendFactor },
-      opacity: { value: params.opacity }
+      opacity: { value: params.opacity },
+      // Matrix transformation uniforms
+      matrix1: { value: new THREE.Matrix4().fromArray(params.matrix1) },
+      matrix2: { value: new THREE.Matrix4().fromArray(params.matrix2) },
+      interpolation: { value: params.interpolation }
     },
     transparent: true,
     depthWrite: params.depthWrite,
@@ -559,6 +609,146 @@ function getBlendingMode(mode: string): THREE.Blending {
 }
 
 // ============================================================================
+// Export/Import and Reset Functions
+// ============================================================================
+
+function exportParameters(): void {
+  const data = {
+    mode: params.mode,
+    particleCount: params.particleCount,
+    rotationSpeedXY: params.rotationSpeedXY,
+    rotationSpeedZW: params.rotationSpeedZW,
+    rotationActiveXY: params.rotationActiveXY,
+    rotationActiveZW: params.rotationActiveZW,
+    particleSize: params.particleSize,
+    spread: params.spread,
+    colorIntensity: params.colorIntensity,
+    colorAnimationSpeed: params.colorAnimationSpeed,
+    timeScale: params.timeScale,
+    projectionFactor: params.projectionFactor,
+    sharpness: params.sharpness,
+    glowIntensity: params.glowIntensity,
+    blendFactor: params.blendFactor,
+    opacity: params.opacity,
+    blendingMode: params.blendingMode,
+    depthWrite: params.depthWrite,
+    matrix1: params.matrix1,
+    matrix2: params.matrix2,
+    interpolation: params.interpolation,
+    reflectionStrength: params.reflectionStrength,
+    reflectionRange: params.reflectionRange,
+    lightIntensity: params.lightIntensity,
+    lightSpeed: params.lightSpeed
+  };
+  
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = '4d-wave-parameters.json';
+  link.click();
+  URL.revokeObjectURL(url);
+  console.log('✅ Parameters exported');
+}
+
+function importParameters(): void {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        
+        // Update params object
+        Object.assign(params, data);
+        
+        // Update shader uniforms
+        if (material.uniforms.matrix1) {
+          material.uniforms.matrix1.value.fromArray(params.matrix1);
+        }
+        if (material.uniforms.matrix2) {
+          material.uniforms.matrix2.value.fromArray(params.matrix2);
+        }
+        if (material.uniforms.interpolation) {
+          material.uniforms.interpolation.value = params.interpolation;
+        }
+        
+        // Recreate particle system if particle count changed
+        recreateParticleSystem();
+        
+        // Update GUI
+        gui.destroy();
+        createGUI();
+        
+        console.log('✅ Parameters imported');
+      } catch (error) {
+        console.error('❌ Error importing parameters:', error);
+        alert('Error importing parameters. Please check the file format.');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function resetToDefault(): void {
+  // Reset to default values
+  params.matrix1 = createIdentityMatrix();
+  params.matrix2 = createIdentityMatrix();
+  params.interpolation = 0.5;
+  params.rotationSpeedXY = 0.01;
+  params.rotationSpeedZW = 0.01;
+  params.rotationActiveXY = false;
+  params.rotationActiveZW = false;
+  params.spread = 3.0;
+  params.colorIntensity = 1.0;
+  params.colorAnimationSpeed = 0.0;
+  params.projectionFactor = 0.15;
+  params.sharpness = 1.0;
+  params.glowIntensity = 0.5;
+  params.blendFactor = 1.0;
+  params.opacity = 1.0;
+  params.blendingMode = 'Normal';
+  params.depthWrite = false;
+  
+  // Update shader uniforms
+  if (material.uniforms.matrix1) {
+    material.uniforms.matrix1.value.fromArray(params.matrix1);
+  }
+  if (material.uniforms.matrix2) {
+    material.uniforms.matrix2.value.fromArray(params.matrix2);
+  }
+  if (material.uniforms.interpolation) {
+    material.uniforms.interpolation.value = params.interpolation;
+  }
+  if (material.uniforms.spread) {
+    material.uniforms.spread.value = params.spread;
+  }
+  if (material.uniforms.colorIntensity) {
+    material.uniforms.colorIntensity.value = params.colorIntensity;
+  }
+  if (material.uniforms.projectionFactor) {
+    material.uniforms.projectionFactor.value = params.projectionFactor;
+  }
+  
+  // Reset rotation angles
+  angleXY = 0;
+  angleZW = 0;
+  
+  // Update GUI
+  gui.destroy();
+  createGUI();
+  
+  console.log('✅ Reset to default parameters');
+}
+
+// ============================================================================
 // GUI Controls
 // ============================================================================
 
@@ -633,7 +823,7 @@ function updateGUIForMode() {
 
 function createGUI() {
   gui = new GUI();
-  gui.title('Simulation Controls');
+  gui.title('4D Wave Control');
   
   // Hide GUI on mobile by default
   if (isMobile) {
@@ -654,16 +844,92 @@ function createGUI() {
       recreateParticleSystem();
     });
   
-  const rotationFolder = gui.addFolder('Rotation (4D Mode)');
-  rotationFolder.add(params, 'rotationSpeedXY', 0, 2, 0.01)
-    .name('XY Speed');
+  // Matrix 1 controls
+  const matrix1Folder = gui.addFolder('Matrix 1');
+  const matrix1Proxies: { [key: string]: number } = {};
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      const index = i * 4 + j;
+      const key = `m1_${i}_${j}`;
+      matrix1Proxies[key] = params.matrix1[index];
+      
+      matrix1Folder.add(matrix1Proxies, key, -2, 2, 0.01)
+        .name(`[${i}][${j}]`)
+        .onChange((value: number) => {
+          params.matrix1[index] = value;
+          if (material.uniforms.matrix1) {
+            material.uniforms.matrix1.value.fromArray(params.matrix1);
+          }
+        });
+    }
+  }
+  matrix1Folder.close();
   
-  rotationFolder.add(params, 'rotationSpeedZW', 0, 2, 0.01)
-    .name('ZW Speed');
+  // Matrix 2 controls
+  const matrix2Folder = gui.addFolder('Matrix 2');
+  const matrix2Proxies: { [key: string]: number } = {};
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      const index = i * 4 + j;
+      const key = `m2_${i}_${j}`;
+      matrix2Proxies[key] = params.matrix2[index];
+      
+      matrix2Folder.add(matrix2Proxies, key, -2, 2, 0.01)
+        .name(`[${i}][${j}]`)
+        .onChange((value: number) => {
+          params.matrix2[index] = value;
+          if (material.uniforms.matrix2) {
+            material.uniforms.matrix2.value.fromArray(params.matrix2);
+          }
+        });
+    }
+  }
+  matrix2Folder.close();
   
-  rotationFolder.close();
+  // Interpolation control
+  gui.add(params, 'interpolation', 0, 1, 0.01)
+    .name('Interpolation')
+    .onChange((value: number) => {
+      if (material.uniforms.interpolation) {
+        material.uniforms.interpolation.value = value;
+      }
+    });
   
-  const visualFolder = gui.addFolder('Visual');
+  // 4D Rotations folder
+  const rotationFolder = gui.addFolder('4D Rotations');
+  
+  // XY Rotation controls
+  const xyRotationControls = {
+    startXY: () => { params.rotationActiveXY = true; },
+    stopXY: () => { params.rotationActiveXY = false; }
+  };
+  rotationFolder.add(xyRotationControls, 'startXY').name('Start XY Rotation');
+  rotationFolder.add(xyRotationControls, 'stopXY').name('Stop XY Rotation');
+  rotationFolder.add(params, 'rotationSpeedXY', 0, 0.5, 0.001).name('XY Speed');
+  
+  // ZW Rotation controls
+  const zwRotationControls = {
+    startZW: () => { params.rotationActiveZW = true; },
+    stopZW: () => { params.rotationActiveZW = false; }
+  };
+  rotationFolder.add(zwRotationControls, 'startZW').name('Start ZW Rotation');
+  rotationFolder.add(zwRotationControls, 'stopZW').name('Stop ZW Rotation');
+  rotationFolder.add(params, 'rotationSpeedZW', 0, 0.5, 0.001).name('ZW Speed');
+  
+  rotationFolder.open();
+  
+  // Export/Import/Reset controls
+  const fileControls = {
+    export: exportParameters,
+    import: importParameters,
+    reset: resetToDefault
+  };
+  gui.add(fileControls, 'export').name('Export Parameters');
+  gui.add(fileControls, 'import').name('Import Parameters');
+  gui.add(fileControls, 'reset').name('Reset to Default');
+  
+  // Visual settings folder
+  const visualFolder = gui.addFolder('Visual Settings');
   visualFolder.add(params, 'spread', 1, 10, 0.1)
     .name('Spread')
     .onChange((value: number) => {
@@ -682,14 +948,15 @@ function createGUI() {
       material.uniforms.colorAnimationSpeed.value = value;
     });
   
-  visualFolder.add(params, 'projectionFactor', 0, 2, 0.1)
+  visualFolder.add(params, 'projectionFactor', 0, 2, 0.01)
     .name('Projection')
     .onChange((value: number) => {
       material.uniforms.projectionFactor.value = value;
     });
   
-  visualFolder.open();
+  visualFolder.close();
   
+  // Particle Appearance folder
   const appearanceFolder = gui.addFolder('Particle Appearance');
   appearanceFolder.add(params, 'sharpness', 0, 1, 0.01)
     .name('Sharpness')
@@ -729,7 +996,7 @@ function createGUI() {
       material.needsUpdate = true;
     });
   
-  appearanceFolder.open();
+  appearanceFolder.close();
   
   gui.add(params, 'timeScale', 0, 3, 0.1).name('Time Scale');
   
@@ -777,10 +1044,14 @@ function animate() {
   material.uniforms.time.value = time;
   
   if (params.mode === '4d-wave') {
-    // Accumulate rotation angles smoothly based on current speeds
+    // Accumulate rotation angles smoothly based on current speeds (only if active)
     const delta = 0.016 * params.timeScale;
-    angleXY += delta * params.rotationSpeedXY;
-    angleZW += delta * params.rotationSpeedZW;
+    if (params.rotationActiveXY) {
+      angleXY += delta * params.rotationSpeedXY;
+    }
+    if (params.rotationActiveZW) {
+      angleZW += delta * params.rotationSpeedZW;
+    }
     
     // Update shader uniforms with accumulated angles
     if (material.uniforms.angleXY) {
@@ -788,6 +1059,11 @@ function animate() {
     }
     if (material.uniforms.angleZW) {
       material.uniforms.angleZW.value = angleZW;
+    }
+    
+    // Update matrix interpolation uniform
+    if (material.uniforms.interpolation) {
+      material.uniforms.interpolation.value = params.interpolation;
     }
   } else if (params.mode === 'indras-net') {
     // Animate light positions in orbit patterns
