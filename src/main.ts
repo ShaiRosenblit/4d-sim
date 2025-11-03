@@ -22,7 +22,7 @@ import GUI from 'lil-gui';
 
 interface SimulationParams {
   mode: '4d-wave' | 'indras-net';
-  particleCount: number;
+  gridSize: number; // Number of points along each dimension of the 4D hypercube
   rotationSpeedXY: number;
   rotationSpeedZW: number;
   rotationActiveXY: boolean;
@@ -62,7 +62,7 @@ function createIdentityMatrix(): number[] {
 
 const params: SimulationParams = {
   mode: '4d-wave',
-  particleCount: 1000,
+  gridSize: 10, // 10 points along each dimension = 10^4 = 10,000 particles
   rotationSpeedXY: 0.01,
   rotationSpeedZW: 0.01,
   rotationActiveXY: false,
@@ -436,8 +436,8 @@ function createParticleSystem() {
 }
 
 function create4DWaveParticles() {
-  // Calculate grid size from particle count (4th root for 4D grid)
-  const gridSize = Math.ceil(Math.pow(params.particleCount, 1/4));
+  // Use grid size directly (creates gridSize^4 particles)
+  const gridSize = params.gridSize;
   const positions4D: number[] = [];
   
   // Create a true 4D hypercube lattice
@@ -445,8 +445,6 @@ function create4DWaveParticles() {
     for (let y = 0; y < gridSize; y++) {
       for (let z = 0; z < gridSize; z++) {
         for (let w = 0; w < gridSize; w++) {
-          if (positions4D.length / 4 >= params.particleCount) break;
-          
           // Map all dimensions uniformly to range [-1, 1]
           const px = (x / (gridSize - 1)) * 2 - 1;
           const py = (y / (gridSize - 1)) * 2 - 1;
@@ -455,11 +453,8 @@ function create4DWaveParticles() {
           
           positions4D.push(px, py, pz, pw);
         }
-        if (positions4D.length / 4 >= params.particleCount) break;
       }
-      if (positions4D.length / 4 >= params.particleCount) break;
     }
-    if (positions4D.length / 4 >= params.particleCount) break;
   }
   
   // Create buffer geometry
@@ -506,16 +501,14 @@ function create4DWaveParticles() {
 }
 
 function createIndrasNetParticles() {
-  // Create particle positions in a 3D grid
-  const gridSize = Math.ceil(Math.pow(params.particleCount, 1/3));
+  // Create particle positions in a 3D grid (using gridSize directly)
+  const gridSize = params.gridSize;
   const positions: number[] = [];
   const spacing = 0.5; // Much smaller spacing for better visualization
   
   for (let x = 0; x < gridSize; x++) {
     for (let y = 0; y < gridSize; y++) {
       for (let z = 0; z < gridSize; z++) {
-        if (positions.length / 3 >= params.particleCount) break;
-        
         // Map to range centered at origin with tighter spacing
         const px = (x / (gridSize - 1) - 0.5) * gridSize * spacing;
         const py = (y / (gridSize - 1) - 0.5) * gridSize * spacing;
@@ -523,9 +516,7 @@ function createIndrasNetParticles() {
         
         positions.push(px, py, pz);
       }
-      if (positions.length / 3 >= params.particleCount) break;
     }
-    if (positions.length / 3 >= params.particleCount) break;
   }
   
   // Create buffer geometry
@@ -615,7 +606,7 @@ function getBlendingMode(mode: string): THREE.Blending {
 function exportParameters(): void {
   const data = {
     mode: params.mode,
-    particleCount: params.particleCount,
+    gridSize: params.gridSize,
     rotationSpeedXY: params.rotationSpeedXY,
     rotationSpeedZW: params.rotationSpeedZW,
     rotationActiveXY: params.rotationActiveXY,
@@ -699,6 +690,7 @@ function importParameters(): void {
 
 function resetToDefault(): void {
   // Reset to default values
+  params.gridSize = 10;
   params.matrix1 = createIdentityMatrix();
   params.matrix2 = createIdentityMatrix();
   params.interpolation = 0.5;
@@ -741,9 +733,8 @@ function resetToDefault(): void {
   angleXY = 0;
   angleZW = 0;
   
-  // Update GUI
-  gui.destroy();
-  createGUI();
+  // Recreate particle system with new grid size
+  recreateParticleSystem();
   
   console.log('✅ Reset to default parameters');
 }
@@ -813,7 +804,10 @@ function recreateParticleSystem() {
   // Update GUI visibility based on mode
   updateGUIForMode();
   
-  console.log('✨ Switched to', params.mode, 'mode with', points.geometry.attributes.position.count, 'particles');
+  const particleCount = params.mode === '4d-wave' 
+    ? Math.pow(params.gridSize, 4)
+    : Math.pow(params.gridSize, 3);
+  console.log('✨ Switched to', params.mode, 'mode with grid size', params.gridSize, '(', particleCount, 'particles)');
 }
 
 function updateGUIForMode() {
@@ -837,9 +831,9 @@ function createGUI() {
       recreateParticleSystem();
     });
   
-  // Particle count control (applies to both modes)
-  gui.add(params, 'particleCount', 50, 8000, 50)
-    .name('Particle Count')
+  // Grid size control (number of points along each dimension)
+  gui.add(params, 'gridSize', 2, 20, 1)
+    .name('Grid Size')
     .onChange(() => {
       recreateParticleSystem();
     });
@@ -1276,9 +1270,9 @@ function init() {
   
   console.log('✨ Simulation ready!');
   const particleCount = params.mode === '4d-wave' 
-    ? points.geometry.attributes.position4D?.count 
-    : points.geometry.attributes.position?.count;
-  console.log('📊 Particle count:', particleCount);
+    ? Math.pow(params.gridSize, 4)
+    : Math.pow(params.gridSize, 3);
+  console.log('📊 Grid size:', params.gridSize, '(', particleCount, 'particles)');
   console.log('🎨 Mode:', params.mode);
   if (isMobile) {
     console.log('📱 Mobile device detected - orientation controls available');
