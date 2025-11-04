@@ -67,7 +67,7 @@ const params: SimulationParams = {
   rotationSpeedZW: 0.01,
   rotationActiveXY: true, // Rotate by default
   rotationActiveZW: true, // Rotate by default
-  particleSize: 1.5, // Smaller dots by default
+  particleSize: 0.5, // Small dots by default
   spread: 3.0,
   colorIntensity: 1.0,
   colorAnimationSpeed: 0.0,
@@ -707,7 +707,7 @@ function resetToDefault(): void {
   params.rotationSpeedZW = 0.01;
   params.rotationActiveXY = true; // Rotate by default
   params.rotationActiveZW = true; // Rotate by default
-  params.particleSize = 1.5;
+  params.particleSize = 0.5;
   params.spread = 3.0;
   params.colorIntensity = 1.0;
   params.colorAnimationSpeed = 0.0;
