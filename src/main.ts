@@ -63,8 +63,8 @@ function createIdentityMatrix(): number[] {
 const params: SimulationParams = {
   mode: '4d-wave',
   gridSize: 10, // 10 points along each dimension = 10^4 = 10,000 particles
-  rotationSpeedXY: 0.01,
-  rotationSpeedZW: 0.01,
+  rotationSpeedXY: 0.03,
+  rotationSpeedZW: 0.03,
   rotationActiveXY: true, // Rotate by default
   rotationActiveZW: true, // Rotate by default
   particleSize: 0.5, // Small dots by default
@@ -703,8 +703,8 @@ function resetToDefault(): void {
   params.matrix1 = createIdentityMatrix();
   params.matrix2 = createIdentityMatrix();
   params.interpolation = 0.5;
-  params.rotationSpeedXY = 0.01;
-  params.rotationSpeedZW = 0.01;
+  params.rotationSpeedXY = 0.03;
+  params.rotationSpeedZW = 0.03;
   params.rotationActiveXY = true; // Rotate by default
   params.rotationActiveZW = true; // Rotate by default
   params.particleSize = 0.5;
