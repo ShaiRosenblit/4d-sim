@@ -63,8 +63,8 @@ function createIdentityMatrix(): number[] {
 const params: SimulationParams = {
   mode: '4d-wave',
   gridSize: 10, // 10 points along each dimension = 10^4 = 10,000 particles
-  rotationSpeedXY: 0.03,
-  rotationSpeedZW: 0.03,
+  rotationSpeedXY: 0.5,
+  rotationSpeedZW: 0.5,
   rotationActiveXY: true, // Rotate by default
   rotationActiveZW: true, // Rotate by default
   particleSize: 0.5, // Small dots by default
@@ -720,8 +720,8 @@ function resetToDefault(): void {
   params.matrix1 = createIdentityMatrix();
   params.matrix2 = createIdentityMatrix();
   params.interpolation = 0.5;
-  params.rotationSpeedXY = 0.03;
-  params.rotationSpeedZW = 0.03;
+  params.rotationSpeedXY = 0.5;
+  params.rotationSpeedZW = 0.5;
   params.rotationActiveXY = true; // Rotate by default
   params.rotationActiveZW = true; // Rotate by default
   params.particleSize = 0.5;
@@ -924,11 +924,11 @@ function createGUI() {
   
   // XY Rotation toggle
   rotationFolder.add(params, 'rotationActiveXY').name('XY Rotation');
-  rotationFolder.add(params, 'rotationSpeedXY', 0, 0.5, 0.001).name('XY Speed');
+  rotationFolder.add(params, 'rotationSpeedXY', 0, 5, 0.01).name('XY Speed');
   
   // ZW Rotation toggle
   rotationFolder.add(params, 'rotationActiveZW').name('ZW Rotation');
-  rotationFolder.add(params, 'rotationSpeedZW', 0, 0.5, 0.001).name('ZW Speed');
+  rotationFolder.add(params, 'rotationSpeedZW', 0, 5, 0.01).name('ZW Speed');
   
   // Reset rotation position button
   const rotationResetControls = {
