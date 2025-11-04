@@ -67,7 +67,7 @@ const params: SimulationParams = {
   rotationSpeedZW: 0.01,
   rotationActiveXY: true, // Rotate by default
   rotationActiveZW: true, // Rotate by default
-  particleSize: 3.0,
+  particleSize: 1.5, // Smaller dots by default
   spread: 3.0,
   colorIntensity: 1.0,
   colorAnimationSpeed: 0.0,
@@ -105,6 +105,7 @@ const vertexShader = `
   uniform float spread;
   uniform float projectionFactor;
   uniform float colorAnimationSpeed;
+  uniform float particleSize;
   
   // Matrix transformation uniforms
   uniform mat4 matrix1;
@@ -186,8 +187,8 @@ const vertexShader = `
     vec4 mvPosition = modelViewMatrix * vec4(pos3D, 1.0);
     gl_Position = projectionMatrix * mvPosition;
     
-    // Point size based on distance (closer = bigger)
-    gl_PointSize = 300.0 / -mvPosition.z;
+    // Point size based on distance (closer = bigger) and particleSize uniform
+    gl_PointSize = (300.0 * particleSize) / -mvPosition.z;
   }
 `;
 
@@ -698,6 +699,7 @@ function resetToDefault(): void {
   params.rotationSpeedZW = 0.01;
   params.rotationActiveXY = true; // Rotate by default
   params.rotationActiveZW = true; // Rotate by default
+  params.particleSize = 1.5;
   params.spread = 3.0;
   params.colorIntensity = 1.0;
   params.colorAnimationSpeed = 0.0;
@@ -718,6 +720,9 @@ function resetToDefault(): void {
   }
   if (material.uniforms.interpolation) {
     material.uniforms.interpolation.value = params.interpolation;
+  }
+  if (material.uniforms.particleSize) {
+    material.uniforms.particleSize.value = params.particleSize;
   }
   if (material.uniforms.spread) {
     material.uniforms.spread.value = params.spread;
@@ -914,6 +919,13 @@ function createGUI() {
   
   // Visual settings folder
   const visualFolder = gui.addFolder('Visual Settings');
+  
+  visualFolder.add(params, 'particleSize', 0.1, 5, 0.1)
+    .name('Particle Size')
+    .onChange((value: number) => {
+      material.uniforms.particleSize.value = value;
+    });
+  
   visualFolder.add(params, 'spread', 1, 10, 0.1)
     .name('Spread')
     .onChange((value: number) => {
