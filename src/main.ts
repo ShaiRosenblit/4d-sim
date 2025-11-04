@@ -689,6 +689,14 @@ function importParameters(): void {
   input.click();
 }
 
+function resetRotation(): void {
+  // Reset only the rotation angles (returns dots to original position)
+  angleXY = 0;
+  angleZW = 0;
+  
+  console.log('🔄 Rotation position reset');
+}
+
 function resetToDefault(): void {
   // Reset to default values
   params.gridSize = 10;
@@ -904,6 +912,12 @@ function createGUI() {
   // ZW Rotation toggle
   rotationFolder.add(params, 'rotationActiveZW').name('ZW Rotation');
   rotationFolder.add(params, 'rotationSpeedZW', 0, 0.5, 0.001).name('ZW Speed');
+  
+  // Reset rotation position button
+  const rotationResetControls = {
+    resetPosition: resetRotation
+  };
+  rotationFolder.add(rotationResetControls, 'resetPosition').name('Reset Position');
   
   rotationFolder.open();
   
