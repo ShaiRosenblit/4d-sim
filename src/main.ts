@@ -769,6 +769,101 @@ function resetToDefault(): void {
   console.log('✅ Reset to default parameters');
 }
 
+function randomizeParameters(): void {
+  // Randomize matrix transformations
+  for (let i = 0; i < 16; i++) {
+    params.matrix1[i] = (Math.random() - 0.5) * 4; // -2 to 2
+    params.matrix2[i] = (Math.random() - 0.5) * 4; // -2 to 2
+  }
+  params.interpolation = Math.random();
+  
+  // Randomize rotation speeds
+  params.rotationSpeedXY = Math.random() * 2; // 0 to 2
+  params.rotationSpeedZW = Math.random() * 2; // 0 to 2
+  params.rotationActiveXY = Math.random() > 0.3; // 70% chance to be active
+  params.rotationActiveZW = Math.random() > 0.3; // 70% chance to be active
+  
+  // Randomize visual parameters
+  params.particleSize = Math.random() * 3 + 0.2; // 0.2 to 3.2
+  params.spread = Math.random() * 7 + 2; // 2 to 9
+  params.colorIntensity = Math.random() * 1.5 + 0.3; // 0.3 to 1.8
+  params.colorAnimationSpeed = Math.random() * 1.5; // 0 to 1.5
+  params.projectionFactor = Math.random() * 1.5; // 0 to 1.5
+  params.sharpness = Math.random(); // 0 to 1
+  params.glowIntensity = Math.random() * 1.5; // 0 to 1.5
+  params.blendFactor = Math.random() * 0.7 + 0.3; // 0.3 to 1
+  params.opacity = Math.random() * 0.5 + 0.5; // 0.5 to 1
+  
+  // Randomize blending mode
+  const blendingModes = ['Normal', 'Additive', 'Subtractive', 'Multiply'];
+  params.blendingMode = blendingModes[Math.floor(Math.random() * blendingModes.length)];
+  params.depthWrite = Math.random() > 0.7; // 30% chance to be true
+  
+  // Randomize Indra's Net parameters
+  params.reflectionStrength = Math.random() * 5; // 0 to 5
+  params.reflectionRange = Math.random() * 8 + 2; // 2 to 10
+  params.lightIntensity = Math.random() * 4 + 0.5; // 0.5 to 4.5
+  params.lightSpeed = Math.random() * 1.5 + 0.2; // 0.2 to 1.7
+  
+  // Update all shader uniforms
+  if (material.uniforms.matrix1) {
+    material.uniforms.matrix1.value.fromArray(params.matrix1);
+  }
+  if (material.uniforms.matrix2) {
+    material.uniforms.matrix2.value.fromArray(params.matrix2);
+  }
+  if (material.uniforms.interpolation) {
+    material.uniforms.interpolation.value = params.interpolation;
+  }
+  if (material.uniforms.particleSize) {
+    material.uniforms.particleSize.value = params.particleSize;
+  }
+  if (material.uniforms.spread) {
+    material.uniforms.spread.value = params.spread;
+  }
+  if (material.uniforms.colorIntensity) {
+    material.uniforms.colorIntensity.value = params.colorIntensity;
+  }
+  if (material.uniforms.colorAnimationSpeed) {
+    material.uniforms.colorAnimationSpeed.value = params.colorAnimationSpeed;
+  }
+  if (material.uniforms.projectionFactor) {
+    material.uniforms.projectionFactor.value = params.projectionFactor;
+  }
+  if (material.uniforms.sharpness) {
+    material.uniforms.sharpness.value = params.sharpness;
+  }
+  if (material.uniforms.glowIntensity) {
+    material.uniforms.glowIntensity.value = params.glowIntensity;
+  }
+  if (material.uniforms.blendFactor) {
+    material.uniforms.blendFactor.value = params.blendFactor;
+  }
+  if (material.uniforms.opacity) {
+    material.uniforms.opacity.value = params.opacity;
+  }
+  if (material.uniforms.reflectionStrength) {
+    material.uniforms.reflectionStrength.value = params.reflectionStrength;
+  }
+  if (material.uniforms.reflectionRange) {
+    material.uniforms.reflectionRange.value = params.reflectionRange;
+  }
+  if (material.uniforms.lightIntensity) {
+    material.uniforms.lightIntensity.value = params.lightIntensity;
+  }
+  
+  // Update material properties
+  material.blending = getBlendingMode(params.blendingMode);
+  material.depthWrite = params.depthWrite;
+  material.needsUpdate = true;
+  
+  // Recreate GUI to reflect new values
+  gui.destroy();
+  createGUI();
+  
+  console.log('🎲 Parameters randomized!');
+}
+
 // ============================================================================
 // GUI Controls
 // ============================================================================
@@ -942,11 +1037,13 @@ function createGUI() {
   const fileControls = {
     export: exportParameters,
     import: importParameters,
+    randomize: randomizeParameters,
     reset: resetToDefault
   };
   gui.add(fileControls, 'export').name('Export Parameters');
   gui.add(fileControls, 'import').name('Import Parameters');
-  gui.add(fileControls, 'reset').name('Reset to Default');
+  gui.add(fileControls, 'randomize').name('🎲 Randomize All');
+  gui.add(fileControls, 'reset').name('🏠 Reset to Default');
   
   // Visual settings folder
   const visualFolder = gui.addFolder('Visual Settings');
