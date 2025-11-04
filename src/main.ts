@@ -171,12 +171,12 @@ const vertexShader = `
     pos3D *= spread;
     
     // Calculate color based on 4D position with independent animation speed
-    // Map 4D coordinates to RGB
+    // Map 4D coordinates to RGB - using W coordinate heavily for color variation
     float colorTime = time * colorAnimationSpeed;
     vColor = vec3(
-      0.5 + 0.5 * sin(pos4D.x * 0.5 + colorTime * 0.5),
-      0.5 + 0.5 * sin(pos4D.y * 0.5 + colorTime * 0.3),
-      0.5 + 0.5 * sin(pos4D.w * 0.5 + colorTime * 0.7)
+      0.5 + 0.5 * sin(pos4D.w * 2.0 + colorTime),
+      0.5 + 0.5 * sin(pos4D.w * 2.0 + 2.094),  // 2.094 radians ≈ 120 degrees for RGB separation
+      0.5 + 0.5 * sin(pos4D.w * 2.0 + 4.189)   // 4.189 radians ≈ 240 degrees
     );
     
     // Calculate intensity based on distance from origin in 4D
