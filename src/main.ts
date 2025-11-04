@@ -65,8 +65,8 @@ const params: SimulationParams = {
   gridSize: 10, // 10 points along each dimension = 10^4 = 10,000 particles
   rotationSpeedXY: 0.01,
   rotationSpeedZW: 0.01,
-  rotationActiveXY: false,
-  rotationActiveZW: false,
+  rotationActiveXY: true, // Rotate by default
+  rotationActiveZW: true, // Rotate by default
   particleSize: 3.0,
   spread: 3.0,
   colorIntensity: 1.0,
@@ -696,8 +696,8 @@ function resetToDefault(): void {
   params.interpolation = 0.5;
   params.rotationSpeedXY = 0.01;
   params.rotationSpeedZW = 0.01;
-  params.rotationActiveXY = false;
-  params.rotationActiveZW = false;
+  params.rotationActiveXY = true; // Rotate by default
+  params.rotationActiveZW = true; // Rotate by default
   params.spread = 3.0;
   params.colorIntensity = 1.0;
   params.colorAnimationSpeed = 0.0;
@@ -892,22 +892,12 @@ function createGUI() {
   // 4D Rotations folder
   const rotationFolder = gui.addFolder('4D Rotations');
   
-  // XY Rotation controls
-  const xyRotationControls = {
-    startXY: () => { params.rotationActiveXY = true; },
-    stopXY: () => { params.rotationActiveXY = false; }
-  };
-  rotationFolder.add(xyRotationControls, 'startXY').name('Start XY Rotation');
-  rotationFolder.add(xyRotationControls, 'stopXY').name('Stop XY Rotation');
+  // XY Rotation toggle
+  rotationFolder.add(params, 'rotationActiveXY').name('XY Rotation');
   rotationFolder.add(params, 'rotationSpeedXY', 0, 0.5, 0.001).name('XY Speed');
   
-  // ZW Rotation controls
-  const zwRotationControls = {
-    startZW: () => { params.rotationActiveZW = true; },
-    stopZW: () => { params.rotationActiveZW = false; }
-  };
-  rotationFolder.add(zwRotationControls, 'startZW').name('Start ZW Rotation');
-  rotationFolder.add(zwRotationControls, 'stopZW').name('Stop ZW Rotation');
+  // ZW Rotation toggle
+  rotationFolder.add(params, 'rotationActiveZW').name('ZW Rotation');
   rotationFolder.add(params, 'rotationSpeedZW', 0, 0.5, 0.001).name('ZW Speed');
   
   rotationFolder.open();
