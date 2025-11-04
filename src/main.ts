@@ -690,11 +690,28 @@ function importParameters(): void {
 }
 
 function resetRotation(): void {
-  // Reset only the rotation angles (returns dots to original position)
+  // Reset all transformations that affect particle positions in all 4 axes
+  // 1. Reset rotation angles
   angleXY = 0;
   angleZW = 0;
   
-  console.log('🔄 Rotation position reset');
+  // 2. Reset matrix transformations to identity
+  params.matrix1 = createIdentityMatrix();
+  params.matrix2 = createIdentityMatrix();
+  params.interpolation = 0.5;
+  
+  // 3. Update shader uniforms
+  if (material.uniforms.matrix1) {
+    material.uniforms.matrix1.value.fromArray(params.matrix1);
+  }
+  if (material.uniforms.matrix2) {
+    material.uniforms.matrix2.value.fromArray(params.matrix2);
+  }
+  if (material.uniforms.interpolation) {
+    material.uniforms.interpolation.value = params.interpolation;
+  }
+  
+  console.log('🔄 All particle positions reset to initial state (all 4 axes)');
 }
 
 function resetToDefault(): void {
