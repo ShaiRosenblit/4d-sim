@@ -1403,6 +1403,13 @@ function init() {
     
     // Setup draggable bottom sheet
     if (dragHandle) {
+      // Set initial height explicitly
+      gui.domElement.style.maxHeight = '35vh';
+      const children = gui.domElement.querySelector('.children') as HTMLElement;
+      if (children) {
+        children.style.maxHeight = 'calc(35vh - 40px)';
+      }
+      
       let isDragging = false;
       let startY = 0;
       let startHeight = 0;
@@ -1412,15 +1419,28 @@ function init() {
       const handleTouchStart = (e: TouchEvent) => {
         isDragging = true;
         startY = e.touches[0].clientY;
-        const currentMaxHeight = gui.domElement.style.maxHeight || '35vh';
-        startHeight = parseFloat(currentMaxHeight);
+        // Get computed style to read actual CSS value
+        const computedStyle = window.getComputedStyle(gui.domElement);
+        const currentMaxHeight = gui.domElement.style.maxHeight || computedStyle.maxHeight;
+        // Extract numeric value from string like "232.4px" or "35vh"
+        if (currentMaxHeight.endsWith('vh')) {
+          startHeight = parseFloat(currentMaxHeight);
+        } else if (currentMaxHeight.endsWith('px')) {
+          // Convert px to vh
+          const px = parseFloat(currentMaxHeight);
+          startHeight = (px / window.innerHeight) * 100;
+        } else {
+          startHeight = 35; // fallback to default
+        }
+        console.log('Drag start - height:', startHeight + 'vh');
       };
       
       const handleTouchMove = (e: TouchEvent) => {
         if (!isDragging) return;
         e.preventDefault();
         
-        const deltaY = startY - e.touches[0].clientY;
+        const currentY = e.touches[0].clientY;
+        const deltaY = startY - currentY;
         const viewportHeight = window.innerHeight;
         const deltaVh = (deltaY / viewportHeight) * 100;
         
@@ -1436,10 +1456,11 @@ function init() {
       
       const handleTouchEnd = () => {
         isDragging = false;
+        console.log('Drag ended - final height:', gui.domElement.style.maxHeight);
       };
       
-      dragHandle.addEventListener('touchstart', handleTouchStart);
-      dragHandle.addEventListener('touchmove', handleTouchMove);
+      dragHandle.addEventListener('touchstart', handleTouchStart, { passive: false });
+      dragHandle.addEventListener('touchmove', handleTouchMove, { passive: false });
       dragHandle.addEventListener('touchend', handleTouchEnd);
       dragHandle.addEventListener('touchcancel', handleTouchEnd);
     }
