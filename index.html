@@ -155,19 +155,34 @@
         --color-input-min-width: 40px;
         --folder-title-height: 28px;
         --widget-padding: 0 0 0 8px;
-        max-height: 50vh;
-        overflow-y: auto;
-        width: 100vw !important;
       }
 
       .lil-gui.root {
-        position: fixed;
+        position: fixed !important;
         bottom: 0 !important;
         left: 0 !important;
         right: 0 !important;
         top: auto !important;
+        height: auto !important;
+        max-height: 50vh !important;
+        width: 100vw !important;
+        border-radius: 16px 16px 0 0 !important;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5) !important;
+        overflow-y: auto !important;
+        transform: none !important;
+      }
+
+      .lil-gui.root .children {
+        max-height: calc(50vh - 40px) !important;
+        overflow-y: auto !important;
+      }
+
+      .lil-gui.root .title {
         border-radius: 16px 16px 0 0;
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+        position: sticky;
+        top: 0;
+        background: var(--background-color);
+        z-index: 1;
       }
 
       /* Hide GUI by default on mobile */
