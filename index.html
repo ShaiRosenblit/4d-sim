@@ -138,23 +138,24 @@
       transform: scale(0.95);
     }
 
-    /* Make lil-gui more mobile friendly - Bottom Sheet Style */
+    /* Make lil-gui more mobile friendly - Bottom Sheet Style (Compact) */
     @media (max-width: 768px) {
       .lil-gui {
         --width: 100%;
-        --widget-height: 28px;
-        --padding: 8px;
-        --spacing: 8px;
-        --font-size: 13px;
-        --input-font-size: 13px;
-        --folder-indent: 10px;
-        --scrollbar-width: 8px;
-        --slider-input-width: 35%;
-        --color-input-width: 60%;
-        --slider-input-min-width: 40px;
-        --color-input-min-width: 40px;
-        --folder-title-height: 28px;
-        --widget-padding: 0 0 0 8px;
+        --widget-height: 20px;
+        --padding: 4px;
+        --spacing: 4px;
+        --font-size: 11px;
+        --input-font-size: 11px;
+        --folder-indent: 6px;
+        --scrollbar-width: 6px;
+        --slider-input-width: 30%;
+        --color-input-width: 55%;
+        --slider-input-min-width: 35px;
+        --color-input-min-width: 35px;
+        --folder-title-height: 22px;
+        --widget-padding: 0 0 0 4px;
+        --name-width: 40%;
       }
 
       .lil-gui.root {
@@ -164,25 +165,28 @@
         right: 0 !important;
         top: auto !important;
         height: auto !important;
-        max-height: 50vh !important;
+        max-height: 25vh !important;
         width: 100vw !important;
-        border-radius: 16px 16px 0 0 !important;
+        border-radius: 12px 12px 0 0 !important;
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5) !important;
         overflow-y: auto !important;
         transform: none !important;
       }
 
       .lil-gui.root .children {
-        max-height: calc(50vh - 40px) !important;
+        max-height: calc(25vh - 30px) !important;
         overflow-y: auto !important;
       }
 
       .lil-gui.root .title {
-        border-radius: 16px 16px 0 0;
+        border-radius: 12px 12px 0 0;
         position: sticky;
         top: 0;
         background: var(--background-color);
         z-index: 1;
+        font-size: 12px;
+        padding: 4px 8px;
+        height: 28px;
       }
 
       /* Hide GUI by default on mobile */
@@ -190,11 +194,16 @@
         display: none !important;
       }
 
-      /* Increase touch targets */
-      .lil-gui button,
+      /* Compact touch targets */
+      .lil-gui button {
+        min-height: 28px;
+        font-size: 11px;
+        padding: 4px 8px;
+      }
+      
       .lil-gui input,
       .lil-gui .slider {
-        min-height: 36px;
+        min-height: 26px;
       }
     }
   </style>
