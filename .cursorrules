@@ -1,0 +1,21 @@
+# Project Rules and Context
+
+## Available Tools
+
+### Playwright
+- Playwright (`@playwright/test`) is installed in this project
+- Use Playwright for browser automation, web scraping, testing, and UI interaction tasks
+- The package is available as a dev dependency
+- When creating Playwright scripts, use TypeScript and run them with `npx tsx <script-name>.ts`
+- Common use cases:
+  - Taking screenshots of websites
+  - Extracting content from web pages
+  - Automated testing of web applications
+  - Simulating user interactions
+  - Capturing visual elements and their properties
+
+## Project Structure
+- This is a TypeScript-based project using Vite as the build tool
+- Main source code is in the `src/` directory
+- Uses Three.js for 3D graphics/simulations
+
