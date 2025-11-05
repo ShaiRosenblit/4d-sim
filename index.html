@@ -80,36 +80,6 @@
       background: #45a049;
     }
 
-    /* Device Orientation Button */
-    #enable-orientation {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 12px 20px;
-      background: rgba(76, 175, 80, 0.95);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      color: white;
-      border-radius: 8px;
-      cursor: pointer;
-      display: none;
-      z-index: 10000;
-      font-size: 14px;
-      font-weight: 500;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-
-    #enable-orientation:hover {
-      background: rgba(76, 175, 80, 1);
-      transform: translateX(-50%) translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
-    }
-
-    #enable-orientation:active {
-      transform: translateX(-50%) translateY(0);
-    }
 
     /* Toggle Controls Button for Mobile */
     #toggle-controls {
@@ -262,9 +232,6 @@
 
   <!-- Toggle Controls Button (shown only on mobile) -->
   <button id="toggle-controls">⚙️</button>
-
-  <!-- Device Orientation Button (shown only on mobile) -->
-  <button id="enable-orientation">📱 Enable Device Orientation</button>
 
   <!-- Draggable Handle for Bottom Sheet (shown only on mobile) -->
   <div id="gui-drag-handle" class="hidden-mobile">

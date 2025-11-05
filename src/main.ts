@@ -1045,6 +1045,19 @@ function createGUI() {
   gui.add(fileControls, 'randomize').name('🎲 Randomize All');
   gui.add(fileControls, 'reset').name('🏠 Reset to Default');
   
+  // Device Orientation (Mobile only)
+  if (isMobile) {
+    const mobileControls = {
+      enableOrientation: async () => {
+        const granted = await requestOrientationPermission();
+        if (granted) {
+          console.log('✅ Device orientation enabled');
+        }
+      }
+    };
+    gui.add(mobileControls, 'enableOrientation').name('📱 Enable Device Tilt');
+  }
+  
   // Visual settings folder
   const visualFolder = gui.addFolder('Visual Settings');
   
@@ -1429,19 +1442,6 @@ function init() {
       dragHandle.addEventListener('touchmove', handleTouchMove);
       dragHandle.addEventListener('touchend', handleTouchEnd);
       dragHandle.addEventListener('touchcancel', handleTouchEnd);
-    }
-    
-    // Setup device orientation button
-    const orientationButton = document.getElementById('enable-orientation');
-    if (orientationButton) {
-      orientationButton.style.display = 'block';
-      orientationButton.addEventListener('click', async () => {
-        const granted = await requestOrientationPermission();
-        if (granted) {
-          // Keep orbit controls enabled for smooth updates
-          orientationButton.style.display = 'none';
-        }
-      });
     }
   }
   
