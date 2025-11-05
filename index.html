@@ -138,31 +138,36 @@
       transform: scale(0.95);
     }
 
-    /* Make lil-gui more mobile friendly */
+    /* Make lil-gui more mobile friendly - Bottom Sheet Style */
     @media (max-width: 768px) {
       .lil-gui {
-        --width: 280px;
-        --widget-height: 24px;
-        --padding: 6px;
-        --spacing: 6px;
-        --font-size: 12px;
-        --input-font-size: 12px;
-        --folder-indent: 8px;
-        --scrollbar-width: 6px;
-        --slider-input-width: 30%;
+        --width: 100%;
+        --widget-height: 28px;
+        --padding: 8px;
+        --spacing: 8px;
+        --font-size: 13px;
+        --input-font-size: 13px;
+        --folder-indent: 10px;
+        --scrollbar-width: 8px;
+        --slider-input-width: 35%;
         --color-input-width: 60%;
         --slider-input-min-width: 40px;
         --color-input-min-width: 40px;
-        --folder-title-height: 24px;
-        --widget-padding: 0 0 0 6px;
-        max-height: 70vh;
+        --folder-title-height: 28px;
+        --widget-padding: 0 0 0 8px;
+        max-height: 50vh;
         overflow-y: auto;
+        width: 100vw !important;
       }
 
       .lil-gui.root {
         position: fixed;
-        top: 10px;
-        right: 10px;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
       }
 
       /* Hide GUI by default on mobile */
@@ -174,7 +179,7 @@
       .lil-gui button,
       .lil-gui input,
       .lil-gui .slider {
-        min-height: 32px;
+        min-height: 36px;
       }
     }
   </style>
