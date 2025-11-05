@@ -12,6 +12,10 @@ alwaysApply: true
 - Use Playwright for browser automation, web scraping, testing, and UI interaction tasks
 - The package is available as a dev dependency
 - When creating Playwright scripts, use TypeScript and run them with `npx tsx <script-name>.ts`
+- **IMPORTANT**: Always check the terminal output for the actual dev server port before creating Playwright scripts
+  - Don't assume default ports (e.g., 5173 for Vite)
+  - Look at the background dev server output to get the correct port
+  - If port is in use, Vite will automatically use another port (e.g., 3001, 3002, etc.)
 - Common use cases:
   - Taking screenshots of websites
   - Extracting content from web pages
