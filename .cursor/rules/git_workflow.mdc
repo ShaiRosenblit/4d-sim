@@ -1,0 +1,9 @@
+---
+description: Ensure every finished task is committed and pushed
+alwaysApply: true
+---
+
+- After completing a task, create a commit with a clear and descriptive message.
+- Push the commit to the remote repository promptly.
+- Ensure all relevant changes are staged before committing.
+- Use the conventional commit format (e.g., `feat:`, `fix:`, `refactor:`) when appropriate.
