@@ -1368,6 +1368,8 @@ function init() {
   if (isMobile) {
     // Setup toggle controls button
     const toggleButton = document.getElementById('toggle-controls');
+    const dragHandle = document.getElementById('gui-drag-handle');
+    
     if (toggleButton) {
       toggleButton.style.display = 'flex';
       let guiVisible = false;
@@ -1376,12 +1378,57 @@ function init() {
         guiVisible = !guiVisible;
         if (guiVisible) {
           gui.domElement.classList.remove('hidden-mobile');
+          if (dragHandle) dragHandle.classList.remove('hidden-mobile');
           toggleButton.textContent = '✕';
         } else {
           gui.domElement.classList.add('hidden-mobile');
+          if (dragHandle) dragHandle.classList.add('hidden-mobile');
           toggleButton.textContent = '⚙️';
         }
       });
+    }
+    
+    // Setup draggable bottom sheet
+    if (dragHandle) {
+      let isDragging = false;
+      let startY = 0;
+      let startHeight = 0;
+      const minHeight = 15; // 15vh minimum
+      const maxHeight = 70; // 70vh maximum
+      
+      const handleTouchStart = (e: TouchEvent) => {
+        isDragging = true;
+        startY = e.touches[0].clientY;
+        const currentMaxHeight = gui.domElement.style.maxHeight || '35vh';
+        startHeight = parseFloat(currentMaxHeight);
+      };
+      
+      const handleTouchMove = (e: TouchEvent) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        
+        const deltaY = startY - e.touches[0].clientY;
+        const viewportHeight = window.innerHeight;
+        const deltaVh = (deltaY / viewportHeight) * 100;
+        
+        let newHeight = startHeight + deltaVh;
+        newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+        
+        gui.domElement.style.maxHeight = `${newHeight}vh`;
+        const children = gui.domElement.querySelector('.children') as HTMLElement;
+        if (children) {
+          children.style.maxHeight = `calc(${newHeight}vh - 40px)`;
+        }
+      };
+      
+      const handleTouchEnd = () => {
+        isDragging = false;
+      };
+      
+      dragHandle.addEventListener('touchstart', handleTouchStart);
+      dragHandle.addEventListener('touchmove', handleTouchMove);
+      dragHandle.addEventListener('touchend', handleTouchEnd);
+      dragHandle.addEventListener('touchcancel', handleTouchEnd);
     }
     
     // Setup device orientation button

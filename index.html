@@ -138,55 +138,93 @@
       transform: scale(0.95);
     }
 
-    /* Make lil-gui more mobile friendly - Bottom Sheet Style (Compact) */
+    /* Draggable handle for bottom sheet */
+    #gui-drag-handle {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      background: rgba(30, 30, 30, 0.98);
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      cursor: grab;
+      touch-action: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    #gui-drag-handle:active {
+      cursor: grabbing;
+    }
+
+    #gui-drag-handle .handle-bar {
+      width: 40px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+      margin-bottom: 4px;
+    }
+
+    #gui-drag-handle .handle-text {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Make lil-gui more mobile friendly - Resizable Bottom Sheet */
     @media (max-width: 768px) {
+      #gui-drag-handle {
+        display: flex;
+      }
+
       .lil-gui {
         --width: 100%;
-        --widget-height: 20px;
-        --padding: 4px;
-        --spacing: 4px;
-        --font-size: 11px;
-        --input-font-size: 11px;
-        --folder-indent: 6px;
-        --scrollbar-width: 6px;
-        --slider-input-width: 30%;
-        --color-input-width: 55%;
-        --slider-input-min-width: 35px;
-        --color-input-min-width: 35px;
-        --folder-title-height: 22px;
-        --widget-padding: 0 0 0 4px;
-        --name-width: 40%;
+        --widget-height: 28px;
+        --padding: 8px;
+        --spacing: 8px;
+        --font-size: 13px;
+        --input-font-size: 13px;
+        --folder-indent: 10px;
+        --scrollbar-width: 8px;
+        --slider-input-width: 35%;
+        --color-input-width: 60%;
+        --slider-input-min-width: 40px;
+        --color-input-min-width: 40px;
+        --folder-title-height: 28px;
+        --widget-padding: 0 0 0 8px;
       }
 
       .lil-gui.root {
         position: fixed !important;
-        bottom: 0 !important;
+        bottom: 44px !important;
         left: 0 !important;
         right: 0 !important;
         top: auto !important;
         height: auto !important;
-        max-height: 25vh !important;
+        max-height: 35vh !important;
         width: 100vw !important;
-        border-radius: 12px 12px 0 0 !important;
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5) !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
         overflow-y: auto !important;
         transform: none !important;
+        transition: max-height 0.1s ease-out;
       }
 
       .lil-gui.root .children {
-        max-height: calc(25vh - 30px) !important;
+        max-height: calc(35vh - 40px) !important;
         overflow-y: auto !important;
       }
 
       .lil-gui.root .title {
-        border-radius: 12px 12px 0 0;
         position: sticky;
         top: 0;
         background: var(--background-color);
         z-index: 1;
-        font-size: 12px;
-        padding: 4px 8px;
-        height: 28px;
       }
 
       /* Hide GUI by default on mobile */
@@ -194,16 +232,15 @@
         display: none !important;
       }
 
-      /* Compact touch targets */
-      .lil-gui button {
-        min-height: 28px;
-        font-size: 11px;
-        padding: 4px 8px;
+      #gui-drag-handle.hidden-mobile {
+        display: none !important;
       }
-      
+
+      /* Touch-friendly targets */
+      .lil-gui button,
       .lil-gui input,
       .lil-gui .slider {
-        min-height: 26px;
+        min-height: 36px;
       }
     }
   </style>
@@ -228,6 +265,12 @@
 
   <!-- Device Orientation Button (shown only on mobile) -->
   <button id="enable-orientation">📱 Enable Device Orientation</button>
+
+  <!-- Draggable Handle for Bottom Sheet (shown only on mobile) -->
+  <div id="gui-drag-handle" class="hidden-mobile">
+    <div class="handle-bar"></div>
+    <div class="handle-text">Drag to Resize</div>
+  </div>
 
   <!-- Main Canvas -->
   <canvas id="canvas"></canvas>
