@@ -414,12 +414,16 @@ function initScene() {
   renderer.xr.enabled = true;
   document.body.appendChild(VRButton.createButton(renderer));
   
-  // Handle GUI visibility in VR sessions
+  // Handle GUI visibility and scene positioning in VR sessions
   renderer.xr.addEventListener('sessionstart', () => {
     gui.domElement.style.display = 'none';
     const toggleBtn = document.getElementById('toggle-controls');
     if (toggleBtn) toggleBtn.style.display = 'none';
     controls.enabled = false; // Disable orbit controls in VR
+    
+    // Position particle system in front of user at comfortable viewing distance
+    // Move particles forward (negative Z) and slightly down
+    points.position.set(0, -2, -8);
   });
   
   renderer.xr.addEventListener('sessionend', () => {
@@ -427,6 +431,9 @@ function initScene() {
     const toggleBtn = document.getElementById('toggle-controls');
     if (toggleBtn && isMobile) toggleBtn.style.display = 'flex';
     controls.enabled = true; // Re-enable orbit controls when exiting VR
+    
+    // Reset particle system position for desktop view
+    points.position.set(0, 0, 0);
   });
   
   // Add orbit controls
@@ -1196,12 +1203,12 @@ function animate() {
   material.uniforms.time.value = time;
   
   if (params.mode === '4d-wave') {
-    // Accumulate rotation angles smoothly based on current speeds (only if active)
+    // Accumulate rotation angles smoothly based on current speeds (only if active and not in VR)
     const delta = 0.016 * params.timeScale;
-    if (params.rotationActiveXY) {
+    if (params.rotationActiveXY && !renderer.xr.isPresenting) {
       angleXY += delta * params.rotationSpeedXY;
     }
-    if (params.rotationActiveZW) {
+    if (params.rotationActiveZW && !renderer.xr.isPresenting) {
       angleZW += delta * params.rotationSpeedZW;
     }
     
