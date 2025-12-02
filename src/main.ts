@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
+import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 import GUI from 'lil-gui';
 
 /**
@@ -384,6 +385,32 @@ let deviceBeta = 0;
 let deviceGamma = 0;
 let isMobile = false;
 
+// VR Controllers
+let controller1: THREE.XRTargetRaySpace;
+let controller2: THREE.XRTargetRaySpace;
+let controllerGrip1: THREE.XRGripSpace;
+let controllerGrip2: THREE.XRGripSpace;
+let controllerModelFactory: XRControllerModelFactory;
+
+// VR rotation control
+let isGrabbingWithController = false;
+let previousControllerPosition = new THREE.Vector3();
+let vrRotationY = 0;
+
+// ============================================================================
+// VR Controller Event Handlers
+// ============================================================================
+
+function onSelectStart(event: any) {
+  const controller = event.target;
+  isGrabbingWithController = true;
+  previousControllerPosition.copy(controller.position);
+}
+
+function onSelectEnd(_event: any) {
+  isGrabbingWithController = false;
+}
+
 function initScene() {
   // Create scene
   scene = new THREE.Scene();
@@ -421,9 +448,9 @@ function initScene() {
     if (toggleBtn) toggleBtn.style.display = 'none';
     controls.enabled = false; // Disable orbit controls in VR
     
-    // Position particle system in front of user at comfortable viewing distance
-    // Move particles forward (negative Z) and slightly down
-    points.position.set(0, -2, -8);
+    // Keep particle system at origin so user is INSIDE the grid
+    // The spread parameter controls how far particles extend around the user
+    points.position.set(0, 0, 0);
   });
   
   renderer.xr.addEventListener('sessionend', () => {
@@ -432,9 +459,43 @@ function initScene() {
     if (toggleBtn && isMobile) toggleBtn.style.display = 'flex';
     controls.enabled = true; // Re-enable orbit controls when exiting VR
     
-    // Reset particle system position for desktop view
+    // Position stays at origin for desktop view
     points.position.set(0, 0, 0);
   });
+  
+  // Setup VR Controllers
+  controllerModelFactory = new XRControllerModelFactory();
+  
+  // Controller 1 (right hand typically)
+  controller1 = renderer.xr.getController(0);
+  controller1.addEventListener('selectstart', onSelectStart);
+  controller1.addEventListener('selectend', onSelectEnd);
+  scene.add(controller1);
+  
+  controllerGrip1 = renderer.xr.getControllerGrip(0);
+  controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+  scene.add(controllerGrip1);
+  
+  // Controller 2 (left hand typically)
+  controller2 = renderer.xr.getController(1);
+  controller2.addEventListener('selectstart', onSelectStart);
+  controller2.addEventListener('selectend', onSelectEnd);
+  scene.add(controller2);
+  
+  controllerGrip2 = renderer.xr.getControllerGrip(1);
+  controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+  scene.add(controllerGrip2);
+  
+  // Add ray visualizers to controllers
+  const geometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, 0, -1)
+  ]);
+  const line = new THREE.Line(geometry);
+  line.name = 'line';
+  line.scale.z = 5;
+  controller1.add(line.clone());
+  controller2.add(line.clone());
   
   // Add orbit controls
   controls = new OrbitControls(camera, renderer.domElement);
@@ -1301,6 +1362,39 @@ function animate() {
   } else if (!renderer.xr.isPresenting) {
     // Update orbit controls when not using device orientation and not in VR
     controls.update();
+  }
+  
+  // Handle VR controller rotation
+  if (renderer.xr.isPresenting) {
+    // Check if either controller is grabbing
+    if (isGrabbingWithController) {
+      // Get the active controller position
+      let activeController = null;
+      if (controller1 && controller1.visible) {
+        activeController = controller1;
+      } else if (controller2 && controller2.visible) {
+        activeController = controller2;
+      }
+      
+      if (activeController) {
+        const currentPos = new THREE.Vector3();
+        activeController.getWorldPosition(currentPos);
+        
+        // Calculate horizontal movement (X-axis)
+        const deltaX = currentPos.x - previousControllerPosition.x;
+        
+        // Rotate the particle system around Y-axis based on horizontal controller movement
+        vrRotationY += deltaX * 2.0; // Multiply for more sensitive rotation
+        points.rotation.y = vrRotationY;
+        
+        // Update previous position
+        previousControllerPosition.copy(currentPos);
+      }
+    }
+  } else {
+    // Reset VR rotation when not in VR
+    points.rotation.y = 0;
+    vrRotationY = 0;
   }
   
   // Render scene
