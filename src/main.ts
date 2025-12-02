@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 import GUI from 'lil-gui';
 
 /**
@@ -409,9 +410,24 @@ function initScene() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   
-  // For future WebXR compatibility
-  // renderer.xr.enabled = true;
-  // document.body.appendChild(VRButton.createButton(renderer));
+  // Enable WebXR for immersive VR
+  renderer.xr.enabled = true;
+  document.body.appendChild(VRButton.createButton(renderer));
+  
+  // Handle GUI visibility in VR sessions
+  renderer.xr.addEventListener('sessionstart', () => {
+    gui.domElement.style.display = 'none';
+    const toggleBtn = document.getElementById('toggle-controls');
+    if (toggleBtn) toggleBtn.style.display = 'none';
+    controls.enabled = false; // Disable orbit controls in VR
+  });
+  
+  renderer.xr.addEventListener('sessionend', () => {
+    gui.domElement.style.display = '';
+    const toggleBtn = document.getElementById('toggle-controls');
+    if (toggleBtn && isMobile) toggleBtn.style.display = 'flex';
+    controls.enabled = true; // Re-enable orbit controls when exiting VR
+  });
   
   // Add orbit controls
   controls = new OrbitControls(camera, renderer.domElement);
@@ -419,6 +435,7 @@ function initScene() {
   controls.dampingFactor = 0.05;
   controls.minDistance = 5;
   controls.maxDistance = 30;
+  controls.enabled = !renderer.xr.isPresenting; // Disable in VR
   
   // Check if mobile device
   isMobile = isMobileDevice();
@@ -1174,8 +1191,6 @@ function createGUI() {
 // ============================================================================
 
 function animate() {
-  requestAnimationFrame(animate);
-  
   // Update time for color animation
   time += 0.016 * params.timeScale; // ~60fps baseline
   material.uniforms.time.value = time;
@@ -1240,8 +1255,8 @@ function animate() {
     }
   }
   
-  // Apply device orientation to camera if enabled
-  if (deviceOrientationEnabled && isMobile) {
+  // Apply device orientation to camera if enabled (not in VR)
+  if (deviceOrientationEnabled && isMobile && !renderer.xr.isPresenting) {
     // Convert device orientation to orbit angles
     // Beta controls vertical rotation (pitch): -180 to 180
     // Gamma controls horizontal rotation (yaw): -90 to 90
@@ -1276,8 +1291,8 @@ function animate() {
     camera.lookAt(controls.target);
     
     controls.update();
-  } else {
-    // Update orbit controls when not using device orientation
+  } else if (!renderer.xr.isPresenting) {
+    // Update orbit controls when not using device orientation and not in VR
     controls.update();
   }
   
@@ -1352,8 +1367,7 @@ function setupWarningOverlay() {
   if (dismissButton && overlay) {
     dismissButton.addEventListener('click', () => {
       overlay.classList.add('hidden');
-      // Start animation after warning is dismissed
-      animate();
+      // Animation loop is started in init() function
     });
   }
 }
@@ -1475,6 +1489,9 @@ function init() {
   if (isMobile) {
     console.log('📱 Mobile device detected - orientation controls available');
   }
+  
+  // Start animation loop (compatible with WebXR)
+  renderer.setAnimationLoop(animate);
 }
 
 // Start the application
